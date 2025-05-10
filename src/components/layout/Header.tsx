@@ -22,13 +22,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const navigate = useNavigate();
   const [notificationCount] = useState(3);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name.charAt(0).toUpperCase();
+    }
+    return user?.email?.charAt(0).toUpperCase() || "U";
   };
 
   return (
@@ -57,14 +65,14 @@ export default function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatar} />
-                <AvatarFallback className="bg-convertia-100 text-convertia-800">
-                  {user?.name?.charAt(0).toUpperCase()}
+                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarFallback className="bg-teal-100 text-teal-800">
+                  {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:flex flex-col items-start">
-                <span className="text-sm font-medium">{user?.name}</span>
-                <span className="text-xs text-gray-500">{user?.position}</span>
+                <span className="text-sm font-medium">{profile?.full_name || user?.email}</span>
+                <span className="text-xs text-gray-500">{profile?.position || "Usuario"}</span>
               </div>
               <ChevronDown size={16} className="text-gray-500 hidden md:block" />
             </Button>
