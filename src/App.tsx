@@ -18,6 +18,37 @@ import Help from "@/pages/Help";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
+// Vamos a importar los nuevos componentes de páginas que necesitaremos
+// Aunque no los tengamos implementados todavía, así ya quedará la estructura
+
+const Inbox = () => (
+  <div className="p-8">
+    <h2 className="text-2xl font-bold mb-4">Comunicación</h2>
+    <p>Este módulo está en desarrollo.</p>
+  </div>
+);
+
+const Documents = () => (
+  <div className="p-8">
+    <h2 className="text-2xl font-bold mb-4">Documentación</h2>
+    <p>Este módulo está en desarrollo.</p>
+  </div>
+);
+
+const Calendar = () => (
+  <div className="p-8">
+    <h2 className="text-2xl font-bold mb-4">Calendario</h2>
+    <p>Este módulo está en desarrollo.</p>
+  </div>
+);
+
+const Settings = () => (
+  <div className="p-8">
+    <h2 className="text-2xl font-bold mb-4">Configuración</h2>
+    <p>Este módulo está en desarrollo.</p>
+  </div>
+);
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -39,6 +70,12 @@ const App = () => (
               <Route path="/performance" element={<Performance />} />
               <Route path="/help" element={<Help />} />
               <Route path="/profile" element={<Profile />} />
+              
+              {/* Nuevas rutas */}
+              <Route path="/inbox" element={<Inbox />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
             
             {/* Catch-all route */}

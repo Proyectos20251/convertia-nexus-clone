@@ -5,29 +5,25 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  Home,
-  Mail,
-  Users,
-  Clock,
+  Calendar,
   BarChart2,
-  TrendingUp,
-  HelpCircle,
+  Clock,
+  FileText,
+  Home,
   Menu,
-  X,
-  Search
+  MessageSquare,
+  Search,
+  Settings,
+  Users,
+  X
 } from "lucide-react";
 
+// Definición de los elementos de navegación
 const navItems = [
   {
     title: "Inicio",
     path: "/dashboard",
     icon: Home,
-    roles: ["admin", "manager", "supervisor", "collaborator"],
-  },
-  {
-    title: "Bandeja de Entrada",
-    path: "/inbox",
-    icon: Mail,
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {
@@ -43,22 +39,34 @@ const navItems = [
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {
-    title: "Análisis",
-    path: "/analytics",
+    title: "Evaluación de Desempeño",
+    path: "/performance",
     icon: BarChart2,
     roles: ["admin", "manager", "supervisor"],
   },
   {
-    title: "Desempeño",
-    path: "/performance",
-    icon: TrendingUp,
+    title: "Comunicación",
+    path: "/inbox",
+    icon: MessageSquare,
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {
-    title: "Ayuda y Comentarios",
-    path: "/help",
-    icon: HelpCircle,
+    title: "Documentación",
+    path: "/documents",
+    icon: FileText,
     roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Calendario",
+    path: "/calendar",
+    icon: Calendar,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Configuración",
+    path: "/settings",
+    icon: Settings,
+    roles: ["admin", "manager"],
   },
 ];
 
@@ -66,7 +74,7 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -78,7 +86,7 @@ export default function Sidebar() {
 
   // Filter nav items based on user role
   const filteredNavItems = navItems.filter(
-    item => user && item.roles.includes(user.role)
+    item => role && item.roles.includes(role)
   );
 
   return (
@@ -114,7 +122,7 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="p-4 border-b flex items-center justify-between">
           {!isCollapsed && (
-            <div className="font-bold text-convertia-600 text-xl">Convert-IA</div>
+            <div className="font-bold text-teal-950 text-xl">Convert-IA</div>
           )}
           <Button
             variant="ghost"
@@ -134,7 +142,7 @@ export default function Sidebar() {
               <input
                 type="text"
                 placeholder="Buscar..."
-                className="w-full pl-8 py-2 text-sm bg-gray-100 rounded-md focus:outline-none focus:ring-1 focus:ring-convertia-500"
+                className="w-full pl-8 py-2 text-sm bg-gray-100 rounded-md focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -153,14 +161,14 @@ export default function Sidebar() {
                     className={cn(
                       "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-convertia-50 text-convertia-700"
+                        ? "bg-teal-50 text-teal-700"
                         : "text-gray-600 hover:bg-gray-100"
                     )}
                   >
                     <item.icon 
                       size={20} 
                       className={cn(
-                        isActive ? "text-convertia-600" : "text-gray-500",
+                        isActive ? "text-teal-600" : "text-gray-500",
                         isCollapsed ? "mx-auto" : "mr-3"
                       )} 
                     />
