@@ -86,7 +86,7 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
-            <img src="/logo-convertia.png" alt="Convert-IA" className="h-16 mx-auto mb-6" />
+            <img src="/logo.png" alt="Convert-IA" className="h-16 mx-auto mb-6" />
             <h1 className="text-3xl font-bold text-gray-800">Bienvenido a Convert-IA</h1>
             <p className="text-gray-500 mt-2">Plataforma de gestión de recursos humanos</p>
           </div>

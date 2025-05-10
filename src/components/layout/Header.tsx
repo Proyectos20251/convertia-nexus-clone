@@ -41,8 +41,8 @@ export default function Header() {
 
   return (
     <header className="h-16 bg-white border-b px-4 flex items-center justify-between sticky top-0 z-10">
-      <div className="md:pl-[250px] transition-all duration-300">
-        {/* Page title can go here */}
+      <div className="md:pl-[250px] transition-all duration-300 flex items-center">
+        <img src="/logo.png" alt="Convert-IA" className="h-8 mr-2" />
       </div>
 
       <div className="flex items-center space-x-4">
