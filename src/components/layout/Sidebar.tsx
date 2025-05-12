@@ -15,7 +15,8 @@ import {
   Search,
   Settings,
   Users,
-  X
+  X,
+  HelpCircle
 } from "lucide-react";
 
 // Definición de los elementos de navegación
@@ -60,6 +61,12 @@ const navItems = [
     title: "Calendario",
     path: "/calendar",
     icon: Calendar,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Ayuda",
+    path: "/help",
+    icon: HelpCircle,
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {

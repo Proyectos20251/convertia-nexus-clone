@@ -1,318 +1,112 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Calendar as CalendarIcon, Check } from "lucide-react";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO } from "date-fns";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-
-// Interfaces para los datos
-interface TimeRecord {
-  id: string;
-  user_id: string;
-  check_in: string;
-  check_out: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Absence {
-  id: string;
-  user_id: string;
-  type_id: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  comment?: string;
-}
-
-interface AbsenceType {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string | null;
-}
+import { CalendarDays, Clock, PlayCircle, PauseCircle, FileText, RotateCcw, Check, X, CalendarCheck } from "lucide-react";
+import { toast } from "sonner";
 
 export default function TimeManagement() {
-  const { user } = useAuth();
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [activeTimeRecord, setActiveTimeRecord] = useState<TimeRecord | null>(null);
-  const [timeRecords, setTimeRecords] = useState<TimeRecord[]>([]);
-  const [myAbsences, setMyAbsences] = useState<any[]>([]);
-  const [absenceTypes, setAbsenceTypes] = useState<AbsenceType[]>([]);
-  const [teamAbsences, setTeamAbsences] = useState<any[]>([]);
-  
-  const form = useForm({
-    defaultValues: {
-      type_id: "",
-      start_date: new Date(),
-      end_date: new Date(),
-      comment: ""
-    }
+  const [clockedIn, setClockedIn] = useState(false);
+  const [clockInTime, setClockInTime] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(2025, 4, 5),
+    to: addDays(new Date(2025, 4, 5), 4),
   });
-  
-  // Cargar tipos de ausencias al iniciar
-  useEffect(() => {
-    const fetchAbsenceTypes = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('absence_types')
-          .select('*');
-          
-        if (error) throw error;
-        
-        setAbsenceTypes(data);
-      } catch (error) {
-        console.error("Error fetching absence types:", error);
-        toast.error("Error al cargar los tipos de ausencia");
-      }
-    };
-    
-    fetchAbsenceTypes();
-  }, []);
-  
-  // Cargar registro de jornada activo y registros históricos
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchTimeRecords = async () => {
-      try {
-        // Obtener el registro activo (sin check_out)
-        const { data: activeRecord, error: activeError } = await supabase
-          .from('time_records')
-          .select('*')
-          .eq('user_id', user.id)
-          .is('check_out', null)
-          .order('check_in', { ascending: false })
-          .maybeSingle();
-        
-        if (activeError) throw activeError;
-        setActiveTimeRecord(activeRecord);
-        
-        // Obtener el historial de registros
-        const { data: records, error: recordsError } = await supabase
-          .from('time_records')
-          .select('*')
-          .eq('user_id', user.id)
-          .not('check_out', 'is', null)
-          .order('check_in', { ascending: false })
-          .limit(10);
-        
-        if (recordsError) throw recordsError;
-        setTimeRecords(records || []);
-      } catch (error) {
-        console.error("Error fetching time records:", error);
-        toast.error("Error al cargar los registros de jornada");
-      }
-    };
-    
-    // Obtener las ausencias del usuario
-    const fetchMyAbsences = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('absences')
-          .select(`
-            *,
-            absence_types (
-              id, name, color
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('start_date', { ascending: false });
-        
-        if (error) throw error;
-        setMyAbsences(data || []);
-      } catch (error) {
-        console.error("Error fetching absences:", error);
-        toast.error("Error al cargar las ausencias");
-      }
-    };
-    
-    // Obtener las ausencias del equipo
-    const fetchTeamAbsences = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        
-        const { data, error } = await supabase
-          .from('absences')
-          .select(`
-            *,
-            profiles:user_id (
-              id, full_name
-            ),
-            absence_types (
-              id, name, color
-            )
-          `)
-          .gte('end_date', today) // Solo ausencias actuales o futuras
-          .order('start_date', { ascending: true });
-        
-        if (error) throw error;
-        setTeamAbsences(data || []);
-      } catch (error) {
-        console.error("Error fetching team absences:", error);
-        toast.error("Error al cargar las ausencias del equipo");
-      }
-    };
-    
-    fetchTimeRecords();
-    fetchMyAbsences();
-    fetchTeamAbsences();
-    
-    // Configurar suscripción para cambios en tiempo real
-    const timeRecordsSubscription = supabase
-      .channel('custom-all-channel')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'time_records',
-        filter: `user_id=eq.${user.id}` 
-      }, () => {
-        fetchTimeRecords();
-      })
-      .subscribe();
-      
-    const absencesSubscription = supabase
-      .channel('custom-absences-channel')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'absences'
-      }, () => {
-        fetchMyAbsences();
-        fetchTeamAbsences();
-      })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(timeRecordsSubscription);
-      supabase.removeChannel(absencesSubscription);
-    };
-  }, [user]);
-  
-  // Función para registrar entrada/salida
-  const handleClockToggle = async () => {
-    if (!user) return;
-    
-    try {
-      if (!activeTimeRecord) {
-        // Registrar entrada
-        const { data, error } = await supabase
-          .from('time_records')
-          .insert({
-            user_id: user.id,
-            check_in: new Date().toISOString()
-          })
-          .select()
-          .single();
-          
-        if (error) throw error;
-        setActiveTimeRecord(data);
-        toast.success("Has registrado tu hora de entrada correctamente");
-      } else {
-        // Registrar salida
-        const { error } = await supabase
-          .from('time_records')
-          .update({
-            check_out: new Date().toISOString()
-          })
-          .eq('id', activeTimeRecord.id);
-          
-        if (error) throw error;
-        setActiveTimeRecord(null);
-        toast.success("Has registrado tu hora de salida correctamente");
-      }
-    } catch (error) {
-      console.error("Error registering time:", error);
-      toast.error("Error al registrar tu hora");
+
+  // Mock data for absences
+  const absences = [
+    {
+      id: 1,
+      type: "Vacaciones",
+      startDate: "10/05/2025",
+      endDate: "20/05/2025",
+      status: "approved",
+    },
+    {
+      id: 2,
+      type: "Baja médica",
+      startDate: "01/07/2025",
+      endDate: "02/07/2025",
+      status: "pending",
+    },
+    {
+      id: 3,
+      type: "Permiso personal",
+      startDate: "15/06/2025",
+      endDate: "15/06/2025",
+      status: "rejected",
+      reason: "Alta demanda de trabajo",
+    },
+  ];
+
+  // Mock data for time records
+  const timeRecords = [
+    {
+      date: "01/05/2025",
+      clockIn: "09:02",
+      clockOut: "18:05",
+      total: "9h 03m",
+    },
+    {
+      date: "02/05/2025",
+      clockIn: "08:55",
+      clockOut: "17:45",
+      total: "8h 50m",
+    },
+    {
+      date: "03/05/2025",
+      clockIn: "09:15",
+      clockOut: "18:10",
+      total: "8h 55m",
+    },
+    {
+      date: "04/05/2025",
+      clockIn: "08:45",
+      clockOut: "17:30",
+      total: "8h 45m",
+    },
+  ];
+
+  // Function to get today's date and time
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return time;
+  };
+
+  // Handle clock in/out
+  const handleClockInOut = () => {
+    if (clockedIn) {
+      setClockedIn(false);
+      toast.success("Has registrado tu salida a las " + getCurrentDateTime());
+    } else {
+      const time = getCurrentDateTime();
+      setClockedIn(true);
+      setClockInTime(time);
+      toast.success("Has registrado tu entrada a las " + time);
     }
   };
-  
-  // Función para solicitar ausencia
-  const handleAbsenceRequest = async (formData: any) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('absences')
-        .insert({
-          user_id: user.id,
-          type_id: formData.type_id,
-          start_date: formData.start_date.toISOString().split('T')[0],
-          end_date: formData.end_date.toISOString().split('T')[0],
-          comment: formData.comment
-        });
-        
-      if (error) throw error;
-      
+
+  // Submit time off request
+  const handleSubmitTimeOff = () => {
+    if (dateRange?.from && dateRange?.to) {
       toast.success("Solicitud de ausencia enviada correctamente");
-      form.reset();
-    } catch (error) {
-      console.error("Error requesting absence:", error);
-      toast.error("Error al enviar la solicitud de ausencia");
-    }
-  };
-  
-  // Función para formatear duración
-  const formatDuration = (checkIn: string, checkOut: string | null) => {
-    if (!checkOut) return "En curso";
-    
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
-    const diffInMs = endDate.getTime() - startDate.getTime();
-    const hours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffInMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  };
-  
-  // Función para formatear fecha
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "dd/MM/yyyy", { locale: es });
-    } catch (error) {
-      return dateString;
-    }
-  };
-  
-  // Función para formatear hora
-  const formatTime = (dateString: string | null) => {
-    if (!dateString) return "--:--";
-    try {
-      return format(new Date(dateString), "HH:mm", { locale: es });
-    } catch (error) {
-      return "--:--";
+    } else {
+      toast.error("Por favor selecciona un rango de fechas");
     }
   };
 
@@ -322,298 +116,467 @@ export default function TimeManagement() {
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Gestión del Tiempo</h1>
 
         <Tabs defaultValue="registro" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="registro">Registro de Jornada</TabsTrigger>
+          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+            <TabsTrigger value="registro">Registro</TabsTrigger>
             <TabsTrigger value="ausencias">Ausencias</TabsTrigger>
-            <TabsTrigger value="calendario">Calendario del Equipo</TabsTrigger>
+            <TabsTrigger value="informes">Informes</TabsTrigger>
           </TabsList>
           
-          {/* Registro de jornada tab */}
           <TabsContent value="registro">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="md:col-span-1">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Control de jornada</CardTitle>
-                  <CardDescription>
-                    Registra tu entrada y salida del trabajo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg mb-4">
-                    <div className="text-4xl font-bold mb-2 text-gray-800">
-                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <div className="text-sm text-gray-500 mb-4">
-                      {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-medium">Calendario</CardTitle>
+                    <CardDescription>Mayo 2025</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      className="rounded-md border"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div>
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-medium">
+                      Registro de hoy
+                    </CardTitle>
+                    <CardDescription>
+                      {format(new Date(), "EEEE, d 'de' MMMM", {locale: es})}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center">
+                    <div className="w-40 h-40 rounded-full border-8 border-gray-100 flex items-center justify-center mb-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-gray-700">
+                          {clockedIn ? clockInTime : "--:--"}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {clockedIn ? "Entrada" : "No registrado"}
+                        </div>
+                      </div>
                     </div>
                     
                     <Button 
-                      className={activeTimeRecord ? "bg-red-500 hover:bg-red-600" : "bg-teal-950 hover:bg-teal-900"} 
-                      size="lg"
-                      onClick={handleClockToggle}
+                      className="w-full mb-4"
+                      variant={clockedIn ? "destructive" : "default"}
+                      onClick={handleClockInOut}
                     >
-                      <Clock className="mr-2 h-4 w-4" />
-                      {activeTimeRecord ? "Registrar salida" : "Registrar entrada"}
+                      {clockedIn ? (
+                        <>
+                          <PauseCircle className="h-4 w-4 mr-2" />
+                          Registrar salida
+                        </>
+                      ) : (
+                        <>
+                          <PlayCircle className="h-4 w-4 mr-2" />
+                          Registrar entrada
+                        </>
+                      )}
                     </Button>
                     
-                    {activeTimeRecord && (
-                      <div className="mt-4 text-sm text-gray-600">
-                        Entrada registrada a las {formatTime(activeTimeRecord.check_in)}
+                    {clockedIn && (
+                      <div className="text-center text-sm text-gray-500 mt-4">
+                        Entrada registrada a las {clockInTime}
                       </div>
                     )}
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium mb-3">Últimos registros</h4>
-                    <ul className="space-y-3">
-                      {timeRecords.slice(0, 3).map((record) => (
-                        <li key={record.id} className="bg-gray-50 p-3 rounded-md flex justify-between">
-                          <span>{formatDate(record.check_in)}</span>
-                          <span>{formatDuration(record.check_in, record.check_out)}</span>
-                        </li>
-                      ))}
-                      {timeRecords.length === 0 && (
-                        <li className="bg-gray-50 p-3 rounded-md text-center text-gray-500">
-                          No hay registros recientes
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="md:col-span-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Historial de registros</CardTitle>
-                  <CardDescription>
-                    Resumen de tus horas registradas
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Entrada</TableHead>
-                          <TableHead>Salida</TableHead>
-                          <TableHead>Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {timeRecords.map((record) => (
-                          <TableRow key={record.id}>
-                            <TableCell>{formatDate(record.check_in)}</TableCell>
-                            <TableCell>{formatTime(record.check_in)}</TableCell>
-                            <TableCell>{formatTime(record.check_out)}</TableCell>
-                            <TableCell className="font-medium">{formatDuration(record.check_in, record.check_out)}</TableCell>
-                          </TableRow>
-                        ))}
-                        {timeRecords.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-gray-500 py-6">
-                              No hay registros disponibles
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-medium">Resumen semanal</CardTitle>
+                    <CardDescription>Esta semana</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Horas trabajadas</span>
+                          <span className="text-sm font-medium">35h 33m / 40h</span>
+                        </div>
+                        <Progress value={89} />
+                        <div className="text-xs text-gray-500">
+                          89% de la jornada semanal completada
+                        </div>
+                      </div>
+                      
+                      <div className="border rounded-md p-4">
+                        <h3 className="text-sm font-medium mb-3">
+                          Últimos registros
+                        </h3>
+                        <div className="space-y-3">
+                          {timeRecords.slice(0, 3).map((record, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <div>
+                                <div className="text-sm font-medium">{record.date}</div>
+                                <div className="text-xs text-gray-500">
+                                  {record.clockIn} - {record.clockOut}
+                                </div>
+                              </div>
+                              <Badge variant="outline">{record.total}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+                        
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Historial de registros</CardTitle>
+                <CardDescription>
+                  Registro completo de entradas y salidas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-xs uppercase tracking-wider border-b text-gray-500">
+                        <th className="py-3 px-4 text-left">Fecha</th>
+                        <th className="py-3 px-4 text-left">Entrada</th>
+                        <th className="py-3 px-4 text-left">Salida</th>
+                        <th className="py-3 px-4 text-left">Tiempo total</th>
+                        <th className="py-3 px-4 text-left">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timeRecords.map((record, index) => (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="font-medium">{record.date}</div>
+                          </td>
+                          <td className="py-3 px-4">{record.clockIn}</td>
+                          <td className="py-3 px-4">{record.clockOut}</td>
+                          <td className="py-3 px-4">{record.total}</td>
+                          <td className="py-3 px-4">
+                            <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                              Completado
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
           
-          {/* Ausencias tab */}
           <TabsContent value="ausencias">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="md:col-span-1">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Balance de días libres</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-500 mb-1">Vacaciones</div>
-                      <div className="flex items-end">
-                        <span className="text-3xl font-bold text-gray-800 mr-2">18</span>
-                        <span className="text-sm text-gray-500">días disponibles</span>
+              <div className="md:col-span-2">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div>
+                      <CardTitle className="text-lg font-medium">Ausencias</CardTitle>
+                      <CardDescription>
+                        Solicitudes y registro de ausencias
+                      </CardDescription>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <CalendarDays className="h-4 w-4 mr-2" />
+                          Solicitar ausencia
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                          <DialogTitle>Solicitud de ausencia</DialogTitle>
+                          <DialogDescription>
+                            Complete los detalles para solicitar un nuevo periodo de ausencia.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Tipo de ausencia</label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un tipo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="vacation">Vacaciones</SelectItem>
+                                <SelectItem value="sick">Baja por enfermedad</SelectItem>
+                                <SelectItem value="personal">Permiso personal</SelectItem>
+                                <SelectItem value="other">Otro</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Periodo</label>
+                            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Justificación (opcional)</label>
+                            <Input placeholder="Detalles sobre la ausencia" />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline">Cancelar</Button>
+                          <Button onClick={handleSubmitTimeOff}>Enviar solicitud</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-xs uppercase tracking-wider border-b text-gray-500">
+                            <th className="py-3 px-4 text-left">Tipo</th>
+                            <th className="py-3 px-4 text-left">Fechas</th>
+                            <th className="py-3 px-4 text-left">Estado</th>
+                            <th className="py-3 px-4 text-left">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {absences.map((absence) => (
+                            <tr key={absence.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4">
+                                <div className="font-medium">{absence.type}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                {absence.startDate} al {absence.endDate}
+                              </td>
+                              <td className="py-3 px-4">
+                                {absence.status === "approved" ? (
+                                  <Badge className="bg-green-100 text-green-800">Aprobado</Badge>
+                                ) : absence.status === "pending" ? (
+                                  <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-800">Rechazado</Badge>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 flex gap-2">
+                                {absence.status === "pending" && (
+                                  <>
+                                    <Button size="sm" variant="outline">
+                                      <FileText className="h-3.5 w-3.5" />
+                                      <span className="sr-only">Ver detalles</span>
+                                    </Button>
+                                    <Button size="sm" variant="outline">
+                                      <RotateCcw className="h-3.5 w-3.5" />
+                                      <span className="sr-only">Cancelar</span>
+                                    </Button>
+                                  </>
+                                )}
+                                {absence.status !== "pending" && (
+                                  <Button size="sm" variant="outline">
+                                    <FileText className="h-3.5 w-3.5" />
+                                    <span className="sr-only">Ver detalles</span>
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-medium">Días disponibles</CardTitle>
+                    <CardDescription>Saldos actuales</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">Vacaciones</span>
+                        <span className="text-sm font-medium">18 / 22 días</span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span className="text-red-500">2</span> días usados este año
-                      </div>
+                      <Progress value={18 / 22 * 100} />
                     </div>
                     
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-500 mb-1">Trabajo remoto</div>
-                      <div className="flex items-end">
-                        <span className="text-3xl font-bold text-gray-800 mr-2">6</span>
-                        <span className="text-sm text-gray-500">días disponibles</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">Días personales</span>
+                        <span className="text-sm font-medium">2 / 3 días</span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span className="text-red-500">4</span> días usados este año
-                      </div>
+                      <Progress value={2/3 * 100} />
                     </div>
+                    
+                    <Separator />
                     
                     <div>
-                      <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleAbsenceRequest)} className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="type_id"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Tipo de ausencia</FormLabel>
-                                <Select 
-                                  onValueChange={field.onChange} 
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar tipo" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {absenceTypes.map(type => (
-                                      <SelectItem key={type.id} value={type.id}>
-                                        {type.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <Button type="submit" className="w-full bg-teal-950 hover:bg-teal-900">
-                            Solicitar ausencia
-                          </Button>
-                        </form>
-                      </Form>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="md:col-span-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Mis solicitudes de ausencia</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Fecha inicio</TableHead>
-                          <TableHead>Fecha fin</TableHead>
-                          <TableHead>Estado</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {myAbsences.map((absence) => (
-                          <TableRow key={absence.id}>
-                            <TableCell>
-                              {absence.absence_types.name}
-                            </TableCell>
-                            <TableCell>{formatDate(absence.start_date)}</TableCell>
-                            <TableCell>{formatDate(absence.end_date)}</TableCell>
-                            <TableCell>
-                              <Badge className={
-                                absence.status === "approved"
-                                  ? "bg-green-100 text-green-800"
-                                  : absence.status === "pending"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-red-100 text-red-800"
-                              }>
-                                {absence.status === "approved" ? "Aprobada" : 
-                                 absence.status === "pending" ? "Pendiente" : "Rechazada"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
+                      <h3 className="text-sm font-medium mb-3">Próximas ausencias</h3>
+                      {absences
+                        .filter(a => a.status === "approved")
+                        .map((absence) => (
+                          <div key={absence.id} className="flex items-center mb-2 text-sm">
+                            <CalendarCheck className="h-4 w-4 mr-2 text-green-600" />
+                            <span>{absence.type}: {absence.startDate} - {absence.endDate}</span>
+                          </div>
                         ))}
-                        {myAbsences.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-gray-500 py-6">
-                              No tienes solicitudes de ausencia
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-medium">Solicitudes pendientes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {absences.filter(a => a.status === "pending").length > 0 ? (
+                      absences
+                        .filter(a => a.status === "pending")
+                        .map((absence) => (
+                          <div key={absence.id} className="flex justify-between items-center p-3 border rounded-md mb-2">
+                            <div>
+                              <div className="font-medium">{absence.type}</div>
+                              <div className="text-sm text-gray-500">
+                                {absence.startDate} - {absence.endDate}
+                              </div>
+                            </div>
+                            <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        No hay solicitudes pendientes
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
           
-          {/* Calendario del equipo tab */}
-          <TabsContent value="calendario">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="md:col-span-1">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Calendario</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    className="rounded-md border w-[290px] mx-auto"
-                    classNames={{
-                      day_selected: "bg-teal-950 text-primary-foreground hover:bg-teal-900",
-                      day_today: "bg-accent text-accent-foreground",
-                    }}
-                  />
-                </CardContent>
-              </Card>
-              
-              <Card className="md:col-span-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Ausencias del equipo</CardTitle>
-                  <CardDescription>
-                    {date && date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {teamAbsences.filter(absence => {
-                      if (!date) return false;
-                      const selectedDate = date.toISOString().split('T')[0];
-                      return absence.start_date <= selectedDate && absence.end_date >= selectedDate;
-                    }).map((absence) => (
-                      <li key={absence.id} className="bg-gray-50 p-4 rounded-lg">
-                        <div className="flex justify-between">
-                          <div className="font-medium">{absence.profiles?.full_name || "Usuario"}</div>
-                          <Badge style={{ 
-                            backgroundColor: `${absence.absence_types.color}20`,
-                            color: absence.absence_types.color
-                          }}>
-                            {absence.absence_types.name}
-                          </Badge>
+          <TabsContent value="informes">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Informes de tiempo</CardTitle>
+                <CardDescription>
+                  Análisis y resúmenes de tus registros de tiempo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-medium">Este mes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Días trabajados:</span>
+                          <span className="font-medium">18 días</span>
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {absence.start_date === absence.end_date
-                            ? `${formatDate(absence.start_date)}`
-                            : `${formatDate(absence.start_date)} - ${formatDate(absence.end_date)}`
-                          }
+                        <div className="flex justify-between text-sm">
+                          <span>Horas totales:</span>
+                          <span className="font-medium">144 horas</span>
                         </div>
-                      </li>
-                    ))}
-                    {teamAbsences.filter(absence => {
-                      if (!date) return false;
-                      const selectedDate = date.toISOString().split('T')[0];
-                      return absence.start_date <= selectedDate && absence.end_date >= selectedDate;
-                    }).length === 0 && (
-                      <li className="text-center py-4 text-gray-500">
-                        No hay ausencias programadas para esta fecha
-                      </li>
-                    )}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Horas extra:</span>
+                          <span className="font-medium">4.5 horas</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Ausencias:</span>
+                          <span className="font-medium">2 días</span>
+                        </div>
+                      </div>
+                      <Button className="w-full mt-4" variant="outline">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ver informe detallado
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-medium">Este año</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Días trabajados:</span>
+                          <span className="font-medium">85 días</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Horas totales:</span>
+                          <span className="font-medium">680 horas</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Vacaciones tomadas:</span>
+                          <span className="font-medium">4 días</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Días personales:</span>
+                          <span className="font-medium">1 día</span>
+                        </div>
+                      </div>
+                      <Button className="w-full mt-4" variant="outline">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ver informe detallado
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-medium">Informes personalizados</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Genera informes personalizados seleccionando el periodo y el tipo de informe.
+                      </p>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Periodo</label>
+                          <Select defaultValue="month">
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="week">Semanal</SelectItem>
+                              <SelectItem value="month">Mensual</SelectItem>
+                              <SelectItem value="quarter">Trimestral</SelectItem>
+                              <SelectItem value="year">Anual</SelectItem>
+                              <SelectItem value="custom">Personalizado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Tipo de informe</label>
+                          <Select defaultValue="all">
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Completo</SelectItem>
+                              <SelectItem value="hours">Solo horas</SelectItem>
+                              <SelectItem value="absences">Solo ausencias</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button className="w-full">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generar informe
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

@@ -4,320 +4,290 @@ import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Share, Bell } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Search, MessageSquare, Star, ThumbsUp, Bell } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function Help() {
-  const { toast } = useToast();
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessage, setChatMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [supportMessage, setSupportMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
-  
-  // Mock data
+  const [openDialog, setOpenDialog] = useState<string | null>(null);
+
   const faqs = [
     {
-      question: "¿Cómo puedo solicitar vacaciones?",
-      answer: "Para solicitar vacaciones, dirígete al módulo de 'Gestión del Tiempo', selecciona la pestaña 'Ausencias' y haz clic en el botón 'Solicitar ausencia'. Completa el formulario con las fechas deseadas y el motivo, y envía la solicitud para su aprobación."
-    },
-    {
-      question: "¿Cómo cambio mi contraseña?",
-      answer: "Para cambiar tu contraseña, haz clic en tu perfil en la parte superior derecha, selecciona 'Configuración' y luego la pestaña 'Seguridad'. Allí encontrarás la opción para cambiar tu contraseña."
-    },
-    {
-      question: "¿Cómo puedo ver mi recibo de nómina?",
-      answer: "Para ver tu recibo de nómina, ve a tu perfil de usuario, selecciona la pestaña 'Documentos' y allí encontrarás todos tus recibos de nómina disponibles para descargar."
-    },
-    {
-      question: "¿Cómo registro horas extras?",
-      answer: "Para registrar horas extras, ve al módulo 'Gestión del Tiempo', pestaña 'Registro de Jornada', y haz clic en 'Registrar horas extras'. Completa el formulario indicando la fecha, las horas y el motivo."
-    },
-    {
-      question: "¿Cómo puedo ver el organigrama de la empresa?",
-      answer: "Para ver el organigrama de la empresa, ve al módulo 'Organización' y selecciona la pestaña 'Organigrama'. Allí podrás visualizar la estructura jerárquica completa de la empresa."
-    },
-  ];
-  
-  const updates = [
-    {
       id: 1,
-      title: "Nueva función de gestión de ausencias",
-      date: "2023-05-02",
-      description: "Hemos añadido nuevas características para mejorar la gestión de ausencias y solicitudes de tiempo libre.",
+      question: "¿Cómo puedo cambiar mi contraseña?",
+      answer: "Para cambiar tu contraseña, dirígete a la sección de Configuración > General > Seguridad y selecciona la opción 'Cambiar contraseña'. Deberás introducir tu contraseña actual y después la nueva contraseña dos veces para confirmarla.",
+      category: "cuenta"
     },
     {
       id: 2,
-      title: "Mejora en el rendimiento general",
-      date: "2023-04-20",
-      description: "Hemos optimizado el rendimiento de la plataforma para proporcionar una experiencia más fluida.",
+      question: "¿Cómo solicito días libres o vacaciones?",
+      answer: "Para solicitar días libres o vacaciones, ve a la sección de Gestión del Tiempo > Solicitudes > Nueva solicitud. Selecciona el tipo de ausencia, las fechas y añade cualquier comentario necesario. Tu supervisor recibirá una notificación y podrá aprobar o rechazar la solicitud.",
+      category: "gestión del tiempo"
     },
     {
       id: 3,
-      title: "Nueva integración con calendario",
-      date: "2023-04-15",
-      description: "Ahora puedes sincronizar tus ausencias y eventos importantes con tu calendario personal.",
+      question: "¿Cómo puedo compartir un documento con mi equipo?",
+      answer: "Para compartir un documento, navega a la sección de Documentación, selecciona el archivo que quieres compartir y haz clic en el botón 'Compartir'. Podrás elegir los usuarios o equipos con los que quieres compartirlo y establecer permisos de lectura o edición.",
+      category: "documentos"
+    },
+    {
+      id: 4,
+      question: "¿Cómo registrar horas extras de trabajo?",
+      answer: "Para registrar horas extras, accede a Gestión del Tiempo > Registro de horas > Nueva entrada. Selecciona la fecha, indica las horas trabajadas fuera de tu horario habitual y añade una justificación. Tu supervisor recibirá una notificación para su aprobación.",
+      category: "gestión del tiempo"
+    },
+    {
+      id: 5,
+      question: "¿Cómo actualizar mi información personal?",
+      answer: "Para actualizar tu información personal, dirígete a Perfil > Editar perfil. Allí podrás modificar tus datos personales, información de contacto y preferencias de la plataforma. Recuerda guardar los cambios al finalizar.",
+      category: "cuenta"
     },
   ];
-  
-  const handleSendChatMessage = () => {
-    if (!chatMessage.trim()) return;
+
+  // Filter FAQs based on search query
+  const filteredFAQs = faqs.filter(faq => 
+    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    faq.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    faq.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleSendSupport = () => {
+    if (supportMessage.trim() === "") {
+      toast.error("Por favor escribe un mensaje");
+      return;
+    }
     
-    toast({
-      title: "Mensaje enviado",
-      description: "Hemos recibido tu mensaje. Un agente te responderá en breve.",
-      className: "bg-green-50 text-green-900 border-green-200",
-    });
-    
-    setChatMessage("");
-    setIsChatOpen(false);
+    toast.success("Mensaje enviado al soporte. Te responderemos lo antes posible.");
+    setSupportMessage("");
+    setOpenDialog(null);
   };
-  
+
   const handleSendFeedback = () => {
-    if (!feedbackMessage.trim()) return;
+    if (feedbackMessage.trim() === "") {
+      toast.error("Por favor comparte tu opinión");
+      return;
+    }
     
-    toast({
-      title: "Gracias por tu opinión",
-      description: "Tu feedback ha sido enviado correctamente.",
-      className: "bg-green-50 text-green-900 border-green-200",
-    });
-    
+    toast.success("¡Gracias por compartir tu opinión!");
     setFeedbackMessage("");
+    setOpenDialog(null);
   };
 
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Ayuda y comentarios</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Ayuda y Comentarios</h1>
         
-        <Tabs defaultValue="help" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="help">Obtener ayuda</TabsTrigger>
-            <TabsTrigger value="feedback">Compartir opinión</TabsTrigger>
-            <TabsTrigger value="updates">Novedades</TabsTrigger>
-          </TabsList>
-          
-          {/* Obtener ayuda tab */}
-          <TabsContent value="help">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-1">
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium">Soporte</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button 
-                    className="w-full flex items-center justify-center"
-                    onClick={() => setIsChatOpen(true)}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Iniciar chat de ayuda
-                  </Button>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium mb-2">Horario de soporte</h3>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Lunes a viernes: 9:00 - 18:00
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Tiempo de respuesta promedio: &lt;1 hora
-                    </p>
-                  </div>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium mb-2">Contacto alternativo</h3>
-                    <p className="text-sm text-gray-600">
-                      Email: soporte@convertia.com
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Teléfono: +34 911 234 567
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium">Preguntas frecuentes</CardTitle>
-                  <CardDescription>
-                    Respuestas a las preguntas más comunes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {faqs.map((faq, index) => (
-                      <div key={index} className="border-b pb-4 last:border-b-0 last:pb-0">
-                        <h3 className="font-medium mb-2">{faq.question}</h3>
-                        <p className="text-sm text-gray-600">{faq.answer}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          {/* Compartir opinión tab */}
-          <TabsContent value="feedback">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left sidebar with actions */}
+          <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-medium">Enviar comentarios</CardTitle>
-                <CardDescription>
-                  Ayúdanos a mejorar compartiendo tu experiencia o sugerencias
-                </CardDescription>
+                <CardTitle className="text-lg font-medium">Centro de ayuda</CardTitle>
+                <CardDescription>Encuentre respuestas o contacte con soporte</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="feedback-type" className="block text-sm font-medium">
-                      Tipo de comentario
-                    </label>
-                    <select 
-                      id="feedback-type"
-                      className="w-full rounded-md border border-gray-300 p-2"
-                    >
-                      <option value="suggestion">Sugerencia</option>
-                      <option value="issue">Problema</option>
-                      <option value="appreciation">Agradecimiento</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="feedback-module" className="block text-sm font-medium">
-                      Módulo relacionado
-                    </label>
-                    <select 
-                      id="feedback-module"
-                      className="w-full rounded-md border border-gray-300 p-2"
-                    >
-                      <option value="general">General</option>
-                      <option value="dashboard">Inicio</option>
-                      <option value="time">Gestión del tiempo</option>
-                      <option value="organization">Organización</option>
-                      <option value="performance">Desempeño</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="feedback-message" className="block text-sm font-medium">
-                      Tu mensaje
-                    </label>
-                    <Textarea 
-                      id="feedback-message"
-                      placeholder="Describe tu experiencia o sugerencia..."
-                      className="min-h-[150px]"
-                      value={feedbackMessage}
-                      onChange={(e) => setFeedbackMessage(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="feedback-screenshot" className="block text-sm font-medium">
-                      Adjuntar captura de pantalla (opcional)
-                    </label>
-                    <Input 
-                      id="feedback-screenshot"
-                      type="file"
-                      accept="image/*"
-                    />
-                  </div>
-                  
-                  <div className="pt-2">
-                    <Button
-                      className="bg-convertia-600 hover:bg-convertia-700"
-                      onClick={handleSendFeedback}
-                      disabled={!feedbackMessage.trim()}
-                    >
-                      <Share className="mr-2 h-4 w-4" />
-                      Enviar comentarios
+              <CardContent className="space-y-4">
+                <Dialog open={openDialog === "help"} onOpenChange={() => setOpenDialog(openDialog === "help" ? null : "help")}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full" variant="default">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Contactar soporte
                     </Button>
-                  </div>
-                </div>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Contactar con soporte técnico</DialogTitle>
+                      <DialogDescription>
+                        Describe el problema o duda que tengas y nuestro equipo te responderá lo antes posible.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <Input placeholder="Asunto" />
+                      <Textarea 
+                        placeholder="Describe tu consulta con el mayor detalle posible..." 
+                        value={supportMessage}
+                        onChange={(e) => setSupportMessage(e.target.value)}
+                        rows={5}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setOpenDialog(null)}>Cancelar</Button>
+                      <Button onClick={handleSendSupport}>Enviar mensaje</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                
+                <Dialog open={openDialog === "feedback"} onOpenChange={() => setOpenDialog(openDialog === "feedback" ? null : "feedback")}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full" variant="outline">
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Compartir opinión
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Comparte tu opinión</DialogTitle>
+                      <DialogDescription>
+                        Tus comentarios nos ayudan a mejorar la plataforma. ¿Qué te ha parecido tu experiencia?
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="flex justify-center space-x-2 py-2">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <Button key={rating} variant="outline" size="icon" className="h-10 w-10">
+                            <Star className={`h-5 w-5 ${rating <= 3 ? 'text-gray-400' : 'text-yellow-400 fill-yellow-400'}`} />
+                          </Button>
+                        ))}
+                      </div>
+                      <Textarea 
+                        placeholder="¿Qué podemos mejorar? Comparte tus ideas y sugerencias..." 
+                        value={feedbackMessage}
+                        onChange={(e) => setFeedbackMessage(e.target.value)}
+                        rows={5}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setOpenDialog(null)}>Cancelar</Button>
+                      <Button onClick={handleSendFeedback}>Enviar opinión</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Button className="w-full" variant="outline">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Ver novedades
+                </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          {/* Novedades tab */}
-          <TabsContent value="updates">
+            
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-medium">Últimas actualizaciones</CardTitle>
-                <CardDescription>
-                  Novedades y mejoras recientes en la plataforma
-                </CardDescription>
+                <CardTitle className="text-sm font-medium">Categorías populares</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-6">
-                  {updates.map((update) => (
-                    <li key={update.id} className="border-b pb-6 last:border-b-0 last:pb-0">
-                      <div className="flex items-start">
-                        <div className="bg-blue-100 rounded-full p-2 mr-4">
-                          <Bell className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <div className="flex justify-between">
-                            <h3 className="font-medium">{update.title}</h3>
-                            <span className="text-sm text-gray-500">{update.date}</span>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {update.description}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+              <CardContent className="space-y-2">
+                {["Cuenta", "Gestión del tiempo", "Documentos", "Organización", "Permisos"].map((category) => (
+                  <Badge 
+                    key={category} 
+                    variant="outline" 
+                    className="mr-2 mb-2 cursor-pointer hover:bg-gray-100"
+                    onClick={() => setSearchQuery(category.toLowerCase())}
+                  >
+                    {category}
+                  </Badge>
+                ))}
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* Chat dialog */}
-      <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Chat de soporte</DialogTitle>
-            <DialogDescription>
-              Explica tu problema y un agente te ayudará en breve
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="bg-gray-50 p-3 rounded-lg mb-4">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8 mr-2">
-                <AvatarImage src="https://i.pravatar.cc/150?img=25" />
-                <AvatarFallback>CS</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium text-sm">Soporte Convert-IA</div>
-                <div className="text-xs text-green-600">En línea</div>
-              </div>
-            </div>
-            <div className="mt-3 p-3 bg-white rounded-lg text-sm">
-              Hola, ¿cómo puedo ayudarte hoy?
-            </div>
           </div>
           
-          <Textarea
-            placeholder="Escribe tu mensaje aquí..."
-            value={chatMessage}
-            onChange={(e) => setChatMessage(e.target.value)}
-            className="min-h-[100px]"
-          />
-          
-          <DialogFooter>
-            <Button 
-              type="submit" 
-              onClick={handleSendChatMessage}
-              disabled={!chatMessage.trim()}
-            >
-              Enviar mensaje
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Main content */}
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Preguntas frecuentes</CardTitle>
+                <CardDescription>
+                  Encuentra respuestas a las preguntas más comunes
+                </CardDescription>
+                <div className="relative mt-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input 
+                    placeholder="Buscar en las preguntas frecuentes..." 
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <Tabs defaultValue="all">
+                  <TabsList className="grid w-full max-w-md grid-cols-4">
+                    <TabsTrigger value="all">Todas</TabsTrigger>
+                    <TabsTrigger value="account">Cuenta</TabsTrigger>
+                    <TabsTrigger value="time">Tiempo</TabsTrigger>
+                    <TabsTrigger value="docs">Documentos</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="all" className="mt-6">
+                    <div className="divide-y">
+                      {filteredFAQs.length > 0 ? (
+                        filteredFAQs.map((faq) => (
+                          <div key={faq.id} className="py-4">
+                            <h3 className="font-medium mb-2">{faq.question}</h3>
+                            <p className="text-sm text-gray-600">{faq.answer}</p>
+                            <div className="mt-2">
+                              <Badge variant="outline" className="text-xs">
+                                {faq.category}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-8 text-center text-gray-500">
+                          <p>No se encontraron resultados para "{searchQuery}"</p>
+                          <p className="text-sm mt-1">Intenta con otros términos o contacta con soporte</p>
+                          <Button 
+                            variant="link" 
+                            className="mt-2"
+                            onClick={() => setOpenDialog("help")}
+                          >
+                            Contactar soporte
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="account" className="mt-6">
+                    <div className="divide-y">
+                      {filteredFAQs
+                        .filter(faq => faq.category.toLowerCase() === "cuenta")
+                        .map((faq) => (
+                          <div key={faq.id} className="py-4">
+                            <h3 className="font-medium mb-2">{faq.question}</h3>
+                            <p className="text-sm text-gray-600">{faq.answer}</p>
+                          </div>
+                        ))}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="time" className="mt-6">
+                    <div className="divide-y">
+                      {filteredFAQs
+                        .filter(faq => faq.category.toLowerCase() === "gestión del tiempo")
+                        .map((faq) => (
+                          <div key={faq.id} className="py-4">
+                            <h3 className="font-medium mb-2">{faq.question}</h3>
+                            <p className="text-sm text-gray-600">{faq.answer}</p>
+                          </div>
+                        ))}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="docs" className="mt-6">
+                    <div className="divide-y">
+                      {filteredFAQs
+                        .filter(faq => faq.category.toLowerCase() === "documentos")
+                        .map((faq) => (
+                          <div key={faq.id} className="py-4">
+                            <h3 className="font-medium mb-2">{faq.question}</h3>
+                            <p className="text-sm text-gray-600">{faq.answer}</p>
+                          </div>
+                        ))}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 }

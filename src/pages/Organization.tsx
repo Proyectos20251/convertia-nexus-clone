@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter } from "lucide-react";
+import OrganizationChart from "@/components/organization/OrganizationChart";
 
 export default function Organization() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,6 +21,7 @@ export default function Organization() {
       department: "Dirección",
       location: "Madrid",
       avatar: "https://i.pravatar.cc/150?img=5",
+      manager: null
     },
     {
       id: 2,
@@ -28,6 +30,7 @@ export default function Organization() {
       department: "Tecnología",
       location: "Barcelona",
       avatar: "https://i.pravatar.cc/150?img=8",
+      manager: 1
     },
     {
       id: 3,
@@ -36,6 +39,7 @@ export default function Organization() {
       department: "Producto",
       location: "Madrid",
       avatar: "https://i.pravatar.cc/150?img=9",
+      manager: 1
     },
     {
       id: 4,
@@ -44,6 +48,7 @@ export default function Organization() {
       department: "Tecnología",
       location: "Valencia",
       avatar: "https://i.pravatar.cc/150?img=12",
+      manager: 2
     },
     {
       id: 5,
@@ -52,6 +57,7 @@ export default function Organization() {
       department: "Producto",
       location: "Madrid",
       avatar: "https://i.pravatar.cc/150?img=16",
+      manager: 3
     },
     {
       id: 6,
@@ -60,6 +66,25 @@ export default function Organization() {
       department: "Marketing",
       location: "Barcelona",
       avatar: "https://i.pravatar.cc/150?img=20",
+      manager: 1
+    },
+    {
+      id: 7,
+      name: "Sofia Reyes",
+      position: "Desarrolladora Frontend",
+      department: "Tecnología",
+      location: "Valencia",
+      avatar: "https://i.pravatar.cc/150?img=25",
+      manager: 2
+    },
+    {
+      id: 8,
+      name: "David Ruiz",
+      position: "Diseñador Gráfico",
+      department: "Producto",
+      location: "Madrid",
+      avatar: "https://i.pravatar.cc/150?img=30",
+      manager: 3
     },
   ];
 
@@ -205,9 +230,21 @@ export default function Organization() {
           </TabsContent>
           
           <TabsContent value="organigrama">
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-medium">Organigrama interactivo</CardTitle>
+                <CardDescription>
+                  Visualización de la estructura organizativa
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OrganizationChart data={employees} />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-medium">Organigrama de la empresa</CardTitle>
+                <CardTitle className="text-lg font-medium">Departamentos</CardTitle>
                 <CardDescription>
                   Estructura organizativa por departamentos y equipos
                 </CardDescription>
@@ -229,7 +266,7 @@ export default function Organization() {
                       </div>
                       <h3 className="font-medium">Director de departamento:</h3>
                       <p className="text-gray-600 mb-4">{department.head}</p>
-                      <button className="text-sm text-convertia-600 hover:underline">
+                      <button className="text-sm text-teal-700 hover:underline">
                         Ver estructura completa
                       </button>
                     </div>
