@@ -45,6 +45,13 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Usuarios de prueba siempre disponibles
+  const testUsers = [
+    { email: "admin@convertia.com", password: "admin123" },
+    { email: "manager@convertia.com", password: "manager123" },
+    { email: "user@convertia.com", password: "user123" },
+  ];
+
   // Redirigir si ya está autenticado
   useEffect(() => {
     if (isAuthenticated) {
@@ -73,13 +80,6 @@ const Login = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Para desarrollo, usuarios de prueba
-  const testUsers = [
-    { email: "admin@convertia.com", password: "admin123" },
-    { email: "manager@convertia.com", password: "manager123" },
-    { email: "user@convertia.com", password: "user123" },
-  ];
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -167,29 +167,28 @@ const Login = () => {
                 </form>
               </Form>
 
-              {process.env.NODE_ENV === "development" && (
-                <div className="mt-6">
-                  <Separator className="my-4" />
-                  <h4 className="text-sm font-medium text-center mb-2 text-gray-500">
-                    Usuarios de prueba (solo en desarrollo)
-                  </h4>
-                  <div className="grid gap-2">
-                    {testUsers.map((user, idx) => (
-                      <div
-                        key={idx}
-                        className="text-xs bg-gray-100 p-2 rounded cursor-pointer hover:bg-gray-200"
-                        onClick={() => {
-                          form.setValue("email", user.email);
-                          form.setValue("password", user.password);
-                        }}
-                      >
-                        <div className="font-semibold">{user.email}</div>
-                        <div className="opacity-75">Contraseña: {user.password}</div>
-                      </div>
-                    ))}
-                  </div>
+              {/* Siempre mostrar los usuarios de prueba */}
+              <div className="mt-6">
+                <Separator className="my-4" />
+                <h4 className="text-sm font-medium text-center mb-2 text-gray-500">
+                  Usuarios de prueba
+                </h4>
+                <div className="grid gap-2">
+                  {testUsers.map((user, idx) => (
+                    <div
+                      key={idx}
+                      className="text-xs bg-gray-100 p-2 rounded cursor-pointer hover:bg-gray-200"
+                      onClick={() => {
+                        form.setValue("email", user.email);
+                        form.setValue("password", user.password);
+                      }}
+                    >
+                      <div className="font-semibold">{user.email}</div>
+                      <div className="opacity-75">Contraseña: {user.password}</div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <div className="text-sm text-center text-gray-500">

@@ -28,25 +28,46 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users solo para desarrollo mientras implementamos Supabase Auth
+// Mock users para desarrollo mientras implementamos Supabase Auth
 const mockUsers = [
   {
     id: "1",
     email: "admin@convertia.com",
     password: "admin123",
     role: "admin" as UserRole,
+    profile: {
+      id: "1",
+      full_name: "Administrador",
+      position: "Administrador",
+      department: "Dirección",
+      avatar_url: null,
+    },
   },
   {
     id: "2",
     email: "manager@convertia.com",
     password: "manager123",
     role: "manager" as UserRole,
+    profile: {
+      id: "2",
+      full_name: "Gerente",
+      position: "Gerente",
+      department: "Recursos Humanos",
+      avatar_url: null,
+    },
   },
   {
     id: "3",
     email: "user@convertia.com",
     password: "user123",
     role: "collaborator" as UserRole,
+    profile: {
+      id: "3",
+      full_name: "Usuario",
+      position: "Colaborador",
+      department: "Administración",
+      avatar_url: null,
+    },
   },
 ];
 
@@ -59,6 +80,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Inicializar la sesión al cargar el componente
   useEffect(() => {
+    // Verificar si hay una sesión guardada en localStorage (para mock users)
+    const storedUser = localStorage.getItem("convertia-user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser as User);
+        setRole(parsedUser.user_metadata?.role || "collaborator");
+        
+        // Buscar el perfil correspondiente en mockUsers
+        const mockUser = mockUsers.find(u => u.email === parsedUser.email);
+        if (mockUser) {
+          setProfile(mockUser.profile);
+        }
+        
+        setIsLoading(false);
+        return;
+      } catch (error) {
+        localStorage.removeItem("convertia-user");
+      }
+    }
+    
     // Configurar el listener de cambios de autenticación primero
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
@@ -152,6 +194,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
+      // Verificar primero si es un usuario mock
+      const mockUser = mockUsers.find(u => u.email === email && u.password === password);
+      
+      if (mockUser) {
+        // Simular inicio de sesión exitoso con usuario mock
+        const mockUserData = {
+          id: mockUser.id,
+          email: mockUser.email,
+          user_metadata: { role: mockUser.role }
+        };
+        localStorage.setItem("convertia-user", JSON.stringify(mockUserData));
+        setUser(mockUserData as any);
+        setProfile(mockUser.profile);
+        setRole(mockUser.role);
+        setIsLoading(false);
+        toast.success("Inicio de sesión exitoso");
+        return;
+      }
+      
+      // Si no es un usuario mock, intentar con Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -159,30 +221,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
       
-      // No necesitamos establecer manualmente user, session, profile o role aquí
-      // El listener onAuthStateChange se encargará de eso
-      
       toast.success("Inicio de sesión exitoso");
     } catch (error: any) {
-      // Verificar si estamos en modo desarrollo y usar usuarios mock
-      if (process.env.NODE_ENV === 'development') {
-        const mockUser = mockUsers.find(u => u.email === email && u.password === password);
-        
-        if (mockUser) {
-          // Simular inicio de sesión exitoso con usuario mock
-          const mockUserData = {
-            id: mockUser.id,
-            email: mockUser.email,
-            user_metadata: { role: mockUser.role }
-          };
-          localStorage.setItem("convertia-user", JSON.stringify(mockUserData));
-          setUser(mockUserData as any);
-          setRole(mockUser.role);
-          setIsLoading(false);
-          return;
-        }
-      }
-      
       console.error("Error de inicio de sesión:", error.message);
       toast.error(error.message || "Error al iniciar sesión");
       setIsLoading(false);
@@ -190,12 +230,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Función de cierre de sesión con Supabase
+  // Función de cierre de sesión 
   const logout = async () => {
     try {
+      // Si es un usuario mock, eliminar de localStorage
+      if (localStorage.getItem("convertia-user")) {
+        localStorage.removeItem("convertia-user");
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        toast.success("Sesión cerrada correctamente");
+        return;
+      }
+      
+      // Si no, cerrar sesión en Supabase
       await supabase.auth.signOut();
-      // No necesitamos establecer estados manualmente
-      // El listener onAuthStateChange se encargará de eso
       toast.success("Sesión cerrada correctamente");
     } catch (error: any) {
       console.error("Error al cerrar sesión:", error.message);
@@ -208,6 +257,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) throw new Error("No hay sesión de usuario");
       
+      // Si es un usuario mock, actualizar en localStorage
+      if (localStorage.getItem("convertia-user")) {
+        const mockUserIndex = mockUsers.findIndex(u => u.id === user.id);
+        if (mockUserIndex >= 0) {
+          mockUsers[mockUserIndex].profile = { 
+            ...mockUsers[mockUserIndex].profile, 
+            ...data 
+          };
+          
+          // Actualizar el estado local
+          setProfile(prev => prev ? { ...prev, ...data } : null);
+          
+          toast.success("Perfil actualizado correctamente");
+          return;
+        }
+      }
+      
+      // Si no es un usuario mock, actualizar en Supabase
       const { error } = await supabase
         .from('profiles')
         .update(data)
