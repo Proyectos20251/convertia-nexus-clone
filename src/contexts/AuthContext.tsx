@@ -71,6 +71,7 @@ export const mockUsers = [
   },
 ];
 
+// Ensure this is a proper React component function (the issue is likely here)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);

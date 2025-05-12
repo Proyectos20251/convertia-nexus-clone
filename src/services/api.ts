@@ -34,6 +34,7 @@ export interface Message {
 }
 
 export interface Permission {
+  id?: string;
   role_name: string;
   module_name: string;
   can_view: boolean;
@@ -264,24 +265,34 @@ export const userService = {
   
   // Obtener permisos por rol
   async getPermissionsByRole(roleName: string): Promise<Permission[]> {
-    const { data, error } = await supabase
-      .from('role_permissions')
-      .select('*')
-      .eq('role_name', roleName);
-
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('*')
+        .eq('role_name', roleName);
+  
+      if (error) throw error;
+      return data as Permission[] || [];
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      return [];
+    }
   },
   
   // Actualizar permiso
   async updatePermission(roleName: string, moduleName: string, permissions: Partial<Permission>): Promise<void> {
-    const { error } = await supabase
-      .from('role_permissions')
-      .update(permissions)
-      .eq('role_name', roleName)
-      .eq('module_name', moduleName);
-
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('role_permissions')
+        .update(permissions as any)
+        .eq('role_name', roleName)
+        .eq('module_name', moduleName);
+  
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error updating permissions:", error);
+      throw error;
+    }
   }
 };
 
@@ -377,65 +388,90 @@ export const documentService = {
 export const messageService = {
   // Enviar un mensaje
   async sendMessage(message: Message): Promise<void> {
-    const { error } = await supabase
-      .from('messages')
-      .insert(message);
-      
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert(message as any);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
   },
   
   // Obtener mensajes recibidos
   async getInboxMessages(userId: string) {
-    const { data, error } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:sender_id (
-          id, full_name, avatar_url
-        )
-      `)
-      .eq('recipient_id', userId)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:sender_id (
+            id, full_name, avatar_url
+          )
+        `)
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching inbox messages:", error);
+      return [];
+    }
   },
   
   // Obtener mensajes enviados
   async getSentMessages(userId: string) {
-    const { data, error } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        recipient:recipient_id (
-          id, full_name, avatar_url
-        )
-      `)
-      .eq('sender_id', userId)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          recipient:recipient_id (
+            id, full_name, avatar_url
+          )
+        `)
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching sent messages:", error);
+      return [];
+    }
   },
   
   // Marcar mensaje como leído
   async markAsRead(messageId: string): Promise<void> {
-    const { error } = await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('id', messageId);
-      
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('id', messageId);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      throw error;
+    }
   },
   
   // Eliminar mensaje
   async deleteMessage(messageId: string): Promise<void> {
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId);
-      
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      throw error;
+    }
   },
   
   // Suscribirse a mensajes en tiempo real
