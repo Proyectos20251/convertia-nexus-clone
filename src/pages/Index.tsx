@@ -103,8 +103,8 @@ export default function Index() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockUsers.map((user, index) => (
-                    <tr key={user.id} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                  {mockUsers.map((user) => (
+                    <tr key={user.id} className={user.id % 2 === 0 ? 'bg-gray-50' : ''}>
                       <td className="py-3 px-4 capitalize">{user.role}</td>
                       <td className="py-3 px-4">{user.email}</td>
                       <td className="py-3 px-4">{user.password}</td>

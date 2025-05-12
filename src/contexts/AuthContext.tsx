@@ -71,7 +71,6 @@ export const mockUsers = [
   },
 ];
 
-// Ensure this is a proper React component function (the issue is likely here)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -86,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser as User);
+        setUser(parsedUser);
         setRole(parsedUser.user_metadata?.role || "collaborator");
         
         // Buscar el perfil correspondiente en mockUsers
@@ -210,7 +209,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(mockUser.profile);
         setRole(mockUser.role);
         setIsLoading(false);
-        toast.success("Inicio de sesión exitoso");
         return;
       }
       
@@ -222,10 +220,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) throw error;
       
-      toast.success("Inicio de sesión exitoso");
     } catch (error: any) {
       console.error("Error de inicio de sesión:", error.message);
-      toast.error(error.message || "Error al iniciar sesión");
       setIsLoading(false);
       throw error;
     }

@@ -1,12 +1,13 @@
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth, mockUsers } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,7 +17,16 @@ export default function Login() {
   
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
+  // Si llega con datos de la página principal, prellenar los campos
+  useEffect(() => {
+    if (location.state?.email && location.state?.password) {
+      setEmail(location.state.email);
+      setPassword(location.state.password);
+    }
+  }, [location.state]);
+
   // Si ya está autenticado, redirigir al dashboard
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -37,9 +47,11 @@ export default function Login() {
     
     try {
       await login(email, password);
+      toast.success("Inicio de sesión exitoso");
       navigate("/dashboard");
     } catch (error: any) {
       setError(error.message || "Credenciales incorrectas");
+      toast.error("Error de inicio de sesión: " + (error.message || "Credenciales incorrectas"));
     } finally {
       setIsLoading(false);
     }
