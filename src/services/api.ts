@@ -273,8 +273,12 @@ export const userService = {
         .eq('role_name', roleName);
   
       if (error) throw error;
-      // Use type assertion to convert the response to Permission[]
-      return (data || []) as Permission[];
+      
+      // More explicit type handling to prevent errors
+      if (!data) return [];
+      
+      // First cast to unknown, then to Permission[] to avoid direct conversion errors
+      return (data as unknown) as Permission[];
     } catch (error) {
       console.error("Error fetching permissions:", error);
       return [];
