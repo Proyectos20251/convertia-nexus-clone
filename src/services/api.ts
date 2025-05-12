@@ -266,13 +266,15 @@ export const userService = {
   // Obtener permisos por rol
   async getPermissionsByRole(roleName: string): Promise<Permission[]> {
     try {
+      // Using a type assertion since role_permissions is not in the types
       const { data, error } = await supabase
-        .from('role_permissions')
+        .from('role_permissions' as any)
         .select('*')
         .eq('role_name', roleName);
   
       if (error) throw error;
-      return data as Permission[] || [];
+      // Use type assertion to convert the response to Permission[]
+      return (data || []) as Permission[];
     } catch (error) {
       console.error("Error fetching permissions:", error);
       return [];
@@ -283,7 +285,7 @@ export const userService = {
   async updatePermission(roleName: string, moduleName: string, permissions: Partial<Permission>): Promise<void> {
     try {
       const { error } = await supabase
-        .from('role_permissions')
+        .from('role_permissions' as any)
         .update(permissions as any)
         .eq('role_name', roleName)
         .eq('module_name', moduleName);
@@ -390,7 +392,7 @@ export const messageService = {
   async sendMessage(message: Message): Promise<void> {
     try {
       const { error } = await supabase
-        .from('messages')
+        .from('messages' as any)
         .insert(message as any);
         
       if (error) throw error;
@@ -404,7 +406,7 @@ export const messageService = {
   async getInboxMessages(userId: string) {
     try {
       const { data, error } = await supabase
-        .from('messages')
+        .from('messages' as any)
         .select(`
           *,
           sender:sender_id (
@@ -426,7 +428,7 @@ export const messageService = {
   async getSentMessages(userId: string) {
     try {
       const { data, error } = await supabase
-        .from('messages')
+        .from('messages' as any)
         .select(`
           *,
           recipient:recipient_id (
@@ -448,8 +450,8 @@ export const messageService = {
   async markAsRead(messageId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('messages')
-        .update({ is_read: true })
+        .from('messages' as any)
+        .update({ is_read: true } as any)
         .eq('id', messageId);
         
       if (error) throw error;
@@ -463,7 +465,7 @@ export const messageService = {
   async deleteMessage(messageId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('messages')
+        .from('messages' as any)
         .delete()
         .eq('id', messageId);
         
