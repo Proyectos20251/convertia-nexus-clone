@@ -1,8 +1,8 @@
 
 import * as React from "react";
-import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
@@ -14,20 +14,29 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface DatePickerWithRangeProps {
+interface DateRangePickerProps {
+  date?: DateRange | undefined;
+  setDate: (date: DateRange | undefined) => void;
   className?: string;
-  date: DateRange | undefined;
-  setDate: React.Dispatch<React.SetStateAction<DateRange | undefined>>;
 }
 
 export function DatePickerWithRange({
-  className,
   date,
   setDate,
-}: DatePickerWithRangeProps) {
+  className,
+}: DateRangePickerProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const handleSelect = (selectedDateRange: DateRange | undefined) => {
+    setDate(selectedDateRange);
+    if (selectedDateRange?.from && selectedDateRange.to) {
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
-      <Popover>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
             id="date"
@@ -41,14 +50,14 @@ export function DatePickerWithRange({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "dd/MM/yyyy", { locale: es })} -{" "}
-                  {format(date.to, "dd/MM/yyyy", { locale: es })}
+                  {format(date.from, "LLL dd, y", { locale: es })} -{" "}
+                  {format(date.to, "LLL dd, y", { locale: es })}
                 </>
               ) : (
-                format(date.from, "dd/MM/yyyy", { locale: es })
+                format(date.from, "LLL dd, y", { locale: es })
               )
             ) : (
-              <span>Selecciona un rango de fechas</span>
+              <span>Selecciona fecha</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -58,9 +67,10 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={handleSelect}
             numberOfMonths={2}
             locale={es}
+            className="pointer-events-auto"
           />
         </PopoverContent>
       </Popover>

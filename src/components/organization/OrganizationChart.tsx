@@ -1,6 +1,14 @@
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  Tooltip,
+  TooltipContent, 
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
+import { Plus, Minus } from "lucide-react";
 
 interface Employee {
   id: number;
@@ -18,6 +26,9 @@ interface OrganizationChartProps {
 const OrganizationChart: React.FC<OrganizationChartProps> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{x: number, y: number}>({x: 0, y: 0});
+  const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
     if (!data.length || !svgRef.current || !containerRef.current) return;
@@ -165,6 +176,20 @@ const OrganizationChart: React.FC<OrganizationChartProps> = ({ data }) => {
       rect.setAttribute("stroke", "#e2e8f0");
     });
     
+    // Add click event to show tooltip
+    nodeGroup.addEventListener("click", (event) => {
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (svgRect) {
+        const offsetX = event.clientX - svgRect.left;
+        const offsetY = event.clientY - svgRect.top;
+        
+        // Show detailed employee info
+        setSelectedEmployee(employee);
+        setTooltipPosition({x: offsetX, y: offsetY});
+        setShowTooltip(true);
+      }
+    });
+    
     // Append all elements to the group
     nodeGroup.appendChild(rect);
     nodeGroup.appendChild(name);
@@ -208,34 +233,78 @@ const OrganizationChart: React.FC<OrganizationChartProps> = ({ data }) => {
   };
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-4">
-        <div className="flex justify-end gap-2 mb-2">
-          <button
-            className="p-1 rounded bg-gray-100 hover:bg-gray-200"
-            onClick={() => handleZoom(1.2)}
+    <TooltipProvider>
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex justify-end gap-2 mb-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="p-1 rounded bg-gray-100 hover:bg-gray-200"
+                  onClick={() => handleZoom(1.2)}
+                >
+                  <Plus size={18} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Acercar</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="p-1 rounded bg-gray-100 hover:bg-gray-200"
+                  onClick={() => handleZoom(0.8)}
+                >
+                  <Minus size={18} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Alejar</TooltipContent>
+            </Tooltip>
+          </div>
+          
+          <div 
+            ref={containerRef} 
+            className="w-full overflow-auto relative"
+            style={{ minHeight: "500px" }}
           >
-            +
-          </button>
-          <button
-            className="p-1 rounded bg-gray-100 hover:bg-gray-200"
-            onClick={() => handleZoom(0.8)}
-          >
-            -
-          </button>
-        </div>
-        <div 
-          ref={containerRef} 
-          className="w-full overflow-auto"
-          style={{ minHeight: "500px" }}
-        >
-          <svg 
-            ref={svgRef}
-            className="organigram-svg"
-          />
-        </div>
-      </CardContent>
-    </Card>
+            <svg 
+              ref={svgRef}
+              className="organigram-svg"
+            />
+            
+            {/* Employee Details Popup */}
+            {showTooltip && selectedEmployee && (
+              <div 
+                className="absolute bg-white p-3 shadow-lg rounded-lg border"
+                style={{
+                  top: tooltipPosition.y + 10,
+                  left: tooltipPosition.x + 10,
+                  zIndex: 10
+                }}
+              >
+                <div className="flex justify-between mb-1">
+                  <h3 className="font-bold">{selectedEmployee.name}</h3>
+                  <button 
+                    className="text-gray-500 hover:text-gray-700" 
+                    onClick={() => setShowTooltip(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="text-sm">
+                  <p><span className="font-medium">Posición:</span> {selectedEmployee.position}</p>
+                  <p><span className="font-medium">Departamento:</span> {selectedEmployee.department}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
 

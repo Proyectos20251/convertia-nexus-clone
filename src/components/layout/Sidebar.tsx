@@ -18,6 +18,7 @@ import {
   X,
   HelpCircle
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Definición de los elementos de navegación
 const navItems = [
@@ -158,32 +159,43 @@ export default function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3">
           <ul className="space-y-1 px-2">
-            {filteredNavItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              
-              return (
-                <li key={item.path}>
-                  <Link 
-                    to={item.path}
-                    className={cn(
-                      "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-teal-50 text-teal-700"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    <item.icon 
-                      size={20} 
-                      className={cn(
-                        isActive ? "text-teal-600" : "text-gray-500",
-                        isCollapsed ? "mx-auto" : "mr-3"
-                      )} 
-                    />
-                    {!isCollapsed && <span>{item.title}</span>}
-                  </Link>
-                </li>
-              );
-            })}
+            <TooltipProvider>
+              {filteredNavItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                
+                return (
+                  <li key={item.path}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link 
+                          to={item.path}
+                          className={cn(
+                            "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-teal-50 text-teal-700"
+                              : "text-gray-600 hover:bg-gray-100"
+                          )}
+                        >
+                          <item.icon 
+                            size={20} 
+                            className={cn(
+                              isActive ? "text-teal-600" : "text-gray-500",
+                              isCollapsed ? "mx-auto" : "mr-3"
+                            )} 
+                          />
+                          {!isCollapsed && <span>{item.title}</span>}
+                        </Link>
+                      </TooltipTrigger>
+                      {isCollapsed && (
+                        <TooltipContent side="right">
+                          {item.title}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </li>
+                );
+              })}
+            </TooltipProvider>
           </ul>
         </nav>
       </aside>

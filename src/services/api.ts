@@ -21,15 +21,37 @@ export interface Absence {
   comment?: string | null;
 }
 
+export interface Message {
+  id?: string;
+  sender_id: string;
+  recipient_id: string;
+  subject: string;
+  content: string;
+  is_read?: boolean;
+  has_attachment?: boolean;
+  attachment_url?: string | null;
+  created_at?: string;
+}
+
+export interface Permission {
+  role_name: string;
+  module_name: string;
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
 // API del servicio de tiempo
 export const timeService = {
   // Registrar hora de entrada
-  async clockIn(userId: string): Promise<TimeRecord> {
+  async clockIn(userId: string, description?: string): Promise<TimeRecord> {
     const { data, error } = await supabase
       .from('time_records')
       .insert({
         user_id: userId,
-        check_in: new Date().toISOString()
+        check_in: new Date().toISOString(),
+        description
       })
       .select()
       .single();
@@ -75,6 +97,25 @@ export const timeService = {
 
     if (error) throw error;
     return data || [];
+  },
+  
+  // Suscribirse a cambios en tiempo real
+  subscribeToTimeRecords(userId: string, callback: () => void) {
+    const channel = supabase
+      .channel('time-records-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'time_records',
+        filter: `user_id=eq.${userId}`
+      }, () => {
+        callback();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };
 
@@ -205,6 +246,215 @@ export const userService = {
     }
 
     return data || 'collaborator';
+  },
+  
+  // Obtener todos los usuarios
+  async getAllUsers() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        user_roles!user_roles(role)
+      `)
+      .order('full_name', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+  
+  // Obtener permisos por rol
+  async getPermissionsByRole(roleName: string): Promise<Permission[]> {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .select('*')
+      .eq('role_name', roleName);
+
+    if (error) throw error;
+    return data || [];
+  },
+  
+  // Actualizar permiso
+  async updatePermission(roleName: string, moduleName: string, permissions: Partial<Permission>): Promise<void> {
+    const { error } = await supabase
+      .from('role_permissions')
+      .update(permissions)
+      .eq('role_name', roleName)
+      .eq('module_name', moduleName);
+
+    if (error) throw error;
+  }
+};
+
+// API para servicio de documentos
+export const documentService = {
+  // Subir un documento
+  async uploadDocument(file: File, userId: string): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${userId}/${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(filePath, file);
+    
+    if (uploadError) throw uploadError;
+
+    // Obtener URL pública
+    const { data } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  },
+  
+  // Registrar documento en la base de datos
+  async createDocument(document: { name: string, file_url: string, file_type: string, user_id: string }): Promise<void> {
+    const { error } = await supabase
+      .from('documents')
+      .insert(document);
+      
+    if (error) throw error;
+  },
+  
+  // Obtener documentos del usuario
+  async getUserDocuments(userId: string) {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  },
+  
+  // Obtener documentos compartidos (para managers/admins)
+  async getSharedDocuments() {
+    const { data, error } = await supabase
+      .from('documents')
+      .select(`
+        *,
+        profiles:user_id (
+          id, full_name
+        )
+      `)
+      .eq('status', 'shared')
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  },
+  
+  // Eliminar documento
+  async deleteDocument(documentId: string): Promise<void> {
+    const { error } = await supabase
+      .from('documents')
+      .delete()
+      .eq('id', documentId);
+      
+    if (error) throw error;
+  },
+  
+  // Suscribirse a cambios en tiempo real
+  subscribeToDocuments(callback: () => void) {
+    const channel = supabase
+      .channel('documents-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'documents'
+      }, () => {
+        callback();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+};
+
+// API para los mensajes
+export const messageService = {
+  // Enviar un mensaje
+  async sendMessage(message: Message): Promise<void> {
+    const { error } = await supabase
+      .from('messages')
+      .insert(message);
+      
+    if (error) throw error;
+  },
+  
+  // Obtener mensajes recibidos
+  async getInboxMessages(userId: string) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:sender_id (
+          id, full_name, avatar_url
+        )
+      `)
+      .eq('recipient_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  },
+  
+  // Obtener mensajes enviados
+  async getSentMessages(userId: string) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        recipient:recipient_id (
+          id, full_name, avatar_url
+        )
+      `)
+      .eq('sender_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  },
+  
+  // Marcar mensaje como leído
+  async markAsRead(messageId: string): Promise<void> {
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('id', messageId);
+      
+    if (error) throw error;
+  },
+  
+  // Eliminar mensaje
+  async deleteMessage(messageId: string): Promise<void> {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId);
+      
+    if (error) throw error;
+  },
+  
+  // Suscribirse a mensajes en tiempo real
+  subscribeToMessages(userId: string, callback: () => void) {
+    const channel = supabase
+      .channel('messages-changes')
+      .on('postgres_changes', {
+        event: '*', 
+        schema: 'public',
+        table: 'messages',
+        filter: `recipient_id=eq.${userId}`
+      }, () => {
+        callback();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };
 
@@ -212,6 +462,8 @@ export const userService = {
 export const setupRealTimeSubscriptions = (userId: string, callbacks: {
   onTimeRecordChange?: () => void;
   onAbsenceChange?: () => void;
+  onMessageChange?: () => void;
+  onDocumentChange?: () => void;
 }) => {
   const timeRecordsChannel = supabase
     .channel('custom-time-records-channel')
@@ -235,9 +487,34 @@ export const setupRealTimeSubscriptions = (userId: string, callbacks: {
       if (callbacks.onAbsenceChange) callbacks.onAbsenceChange();
     })
     .subscribe();
+    
+  const messagesChannel = supabase
+    .channel('custom-messages-channel')
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'messages',
+      filter: `recipient_id=eq.${userId}` 
+    }, () => {
+      if (callbacks.onMessageChange) callbacks.onMessageChange();
+    })
+    .subscribe();
+    
+  const documentsChannel = supabase
+    .channel('custom-documents-channel')
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'documents'
+    }, () => {
+      if (callbacks.onDocumentChange) callbacks.onDocumentChange();
+    })
+    .subscribe();
   
   return () => {
     supabase.removeChannel(timeRecordsChannel);
     supabase.removeChannel(absencesChannel);
+    supabase.removeChannel(messagesChannel);
+    supabase.removeChannel(documentsChannel);
   };
 };

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,195 +10,392 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { userService, type Permission } from "@/services/api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Settings() {
-  const { role } = useAuth();
+  const { user, profile, role, updateProfile } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [position, setPosition] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedRole, setSelectedRole] = useState<string>('collaborator');
+
+  // Load initial data
+  useEffect(() => {
+    if (profile) {
+      setName(profile.full_name || "");
+      setEmail(user?.email || "");
+      setPosition(profile.position || "");
+    }
+    
+    if (role === 'admin') {
+      loadUsers();
+      loadRolePermissions('collaborator');
+    }
+  }, [profile, user, role]);
+
+  const loadUsers = async () => {
+    try {
+      const data = await userService.getAllUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error("Error loading users:", error);
+      toast.error("Error al cargar los usuarios");
+    }
+  };
+
+  const loadRolePermissions = async (roleName: string) => {
+    try {
+      setLoading(true);
+      const data = await userService.getPermissionsByRole(roleName);
+      setPermissions(data);
+      setSelectedRole(roleName);
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+      toast.error("Error al cargar los permisos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setUpdating(true);
+      await updateProfile({
+        full_name: name,
+        position
+      });
+      
+      toast.success("Perfil actualizado correctamente");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Error al actualizar el perfil");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handlePermissionChange = async (
+    moduleName: string,
+    permission: keyof Omit<Permission, "role_name" | "module_name">,
+    checked: boolean
+  ) => {
+    try {
+      // Find the permission in the state
+      const permissionIndex = permissions.findIndex(p => p.module_name === moduleName);
+      if (permissionIndex === -1) return;
+      
+      // Create a new array with the updated permission
+      const updatedPermissions = [...permissions];
+      updatedPermissions[permissionIndex] = {
+        ...updatedPermissions[permissionIndex],
+        [permission]: checked
+      };
+      
+      setPermissions(updatedPermissions);
+      
+      // Update in the database
+      await userService.updatePermission(
+        selectedRole,
+        moduleName,
+        { [permission]: checked }
+      );
+      
+      toast.success(`Permiso actualizado correctamente`);
+    } catch (error) {
+      console.error("Error updating permission:", error);
+      toast.error("Error al actualizar el permiso");
+      
+      // Reload permissions to ensure state is in sync with database
+      await loadRolePermissions(selectedRole);
+    }
+  };
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Configuración</h1>
         
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
-            {role && ['admin', 'manager'].includes(role) && (
-              <TabsTrigger value="admin">Administración</TabsTrigger>
+        <Tabs defaultValue={role === "admin" ? "permissions" : "profile"}>
+          <TabsList>
+            <TabsTrigger value="profile">Mi Perfil</TabsTrigger>
+            <TabsTrigger value="account">Cuenta</TabsTrigger>
+            {role === "admin" && (
+              <TabsTrigger value="permissions">Permisos</TabsTrigger>
             )}
+            <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="general">
-            <div className="space-y-6">
+          <div className="mt-6">
+            <TabsContent value="profile">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg font-medium">Información de la cuenta</CardTitle>
+                  <CardTitle>Información Personal</CardTitle>
                   <CardDescription>
-                    Administra tu información personal y de contacto
+                    Actualiza tu información personal y profesional
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nombre completo</Label>
-                      <Input id="name" placeholder="Tu nombre completo" />
+                      <Input 
+                        id="name" 
+                        value={name} 
+                        onChange={(e) => setName(e.target.value)}
+                      />
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
-                      <Input id="email" type="email" placeholder="tu@ejemplo.com" />
+                      <Input 
+                        id="email" 
+                        value={email} 
+                        readOnly 
+                        disabled 
+                      />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Teléfono</Label>
-                      <Input id="phone" placeholder="+34 600 000 000" />
-                    </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="position">Puesto</Label>
-                      <Input id="position" placeholder="Tu cargo o posición" />
+                      <Input 
+                        id="position" 
+                        value={position} 
+                        onChange={(e) => setPosition(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Rol</Label>
+                      <Input 
+                        id="role" 
+                        value={role || ""} 
+                        readOnly 
+                        disabled 
+                      />
                     </div>
                   </div>
-                  <Button>Guardar cambios</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium">Preferencias</CardTitle>
-                  <CardDescription>
-                    Personaliza tu experiencia en la plataforma
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Idioma</p>
-                      <p className="text-sm text-gray-500">Selecciona el idioma para la interfaz</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge>Español</Badge>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Tema oscuro</p>
-                      <p className="text-sm text-gray-500">Activa el modo oscuro para la interfaz</p>
-                    </div>
-                    <Switch id="dark-mode" />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Zona horaria</p>
-                      <p className="text-sm text-gray-500">Define tu zona horaria para eventos y notificaciones</p>
-                    </div>
-                    <div>
-                      <Badge>Europe/Madrid (GMT+2)</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium text-red-600">Zona peligrosa</CardTitle>
-                  <CardDescription>
-                    Acciones irreversibles para tu cuenta
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Eliminar cuenta</p>
-                      <p className="text-sm text-gray-500">Esta acción es permanente y no se puede deshacer</p>
-                    </div>
-                    <Button variant="destructive" size="sm">Eliminar cuenta</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">Preferencias de notificaciones</CardTitle>
-                <CardDescription>
-                  Configura cómo y cuándo quieres recibir notificaciones
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Correo electrónico</p>
-                    <p className="text-sm text-gray-500">Recibe notificaciones por correo electrónico</p>
-                  </div>
-                  <Switch id="email-notifications" defaultChecked />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Notificaciones en la plataforma</p>
-                    <p className="text-sm text-gray-500">Notificaciones en tiempo real dentro de la aplicación</p>
-                  </div>
-                  <Switch id="app-notifications" defaultChecked />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Calendario</p>
-                    <p className="text-sm text-gray-500">Notificaciones sobre eventos próximos</p>
-                  </div>
-                  <Switch id="calendar-notifications" defaultChecked />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Recordatorios de tareas</p>
-                    <p className="text-sm text-gray-500">Alertas sobre plazos y tareas pendientes</p>
-                  </div>
-                  <Switch id="task-notifications" defaultChecked />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {role && ['admin', 'manager'].includes(role) && (
-            <TabsContent value="admin">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium">Configuración de administrador</CardTitle>
-                  <CardDescription>
-                    Controla los ajustes generales de la plataforma
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium">Nuevos registros</p>
-                      <p className="text-sm text-gray-500">Permitir que nuevos usuarios se registren</p>
-                    </div>
-                    <Switch id="allow-registrations" defaultChecked />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium">Modo mantenimiento</p>
-                      <p className="text-sm text-gray-500">Activa el modo de mantenimiento en la plataforma</p>
-                    </div>
-                    <Switch id="maintenance-mode" />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium">Registro de actividad</p>
-                      <p className="text-sm text-gray-500">Habilitar registro detallado de actividad de usuarios</p>
-                    </div>
-                    <Switch id="activity-log" defaultChecked />
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      onClick={handleProfileUpdate}
+                      disabled={updating}
+                    >
+                      {updating ? "Actualizando..." : "Guardar cambios"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-          )}
+            
+            <TabsContent value="account">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preferencias de Cuenta</CardTitle>
+                  <CardDescription>
+                    Gestiona tus preferencias de cuenta y seguridad
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Idioma</h3>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="language">Idioma del sistema</Label>
+                      <Select defaultValue="es">
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Selecciona idioma" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="es">Español</SelectItem>
+                          <SelectItem value="en">English</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Seguridad</h3>
+                    <Button variant="outline">Cambiar contraseña</Button>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Sesiones</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Sesión actual</p>
+                        <p className="text-sm text-gray-500">Iniciada hace 2 horas</p>
+                      </div>
+                      <Badge>Activa</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {role === "admin" && (
+              <TabsContent value="permissions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gestión de Permisos</CardTitle>
+                    <CardDescription>
+                      Configura los permisos para los diferentes roles del sistema
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-6">
+                      <Label htmlFor="role-selector">Seleccionar Rol</Label>
+                      <Select 
+                        value={selectedRole} 
+                        onValueChange={(value) => loadRolePermissions(value)}
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Selecciona un rol" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="manager">Gerente</SelectItem>
+                          <SelectItem value="supervisor">Supervisor</SelectItem>
+                          <SelectItem value="collaborator">Colaborador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {loading ? (
+                      <div className="flex justify-center py-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Módulo</TableHead>
+                              <TableHead>Ver</TableHead>
+                              <TableHead>Crear</TableHead>
+                              <TableHead>Editar</TableHead>
+                              <TableHead>Eliminar</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {permissions.map((permission) => (
+                              <TableRow key={permission.module_name}>
+                                <TableCell className="font-medium">
+                                  {permission.module_name.charAt(0).toUpperCase() + permission.module_name.slice(1)}
+                                </TableCell>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={permission.can_view} 
+                                    onCheckedChange={(checked) => 
+                                      handlePermissionChange(permission.module_name, "can_view", !!checked)
+                                    }
+                                    disabled={selectedRole === "admin"}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={permission.can_create} 
+                                    onCheckedChange={(checked) => 
+                                      handlePermissionChange(permission.module_name, "can_create", !!checked)
+                                    }
+                                    disabled={selectedRole === "admin"}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={permission.can_edit} 
+                                    onCheckedChange={(checked) => 
+                                      handlePermissionChange(permission.module_name, "can_edit", !!checked)
+                                    }
+                                    disabled={selectedRole === "admin"}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={permission.can_delete} 
+                                    onCheckedChange={(checked) => 
+                                      handlePermissionChange(permission.module_name, "can_delete", !!checked)
+                                    }
+                                    disabled={selectedRole === "admin"}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+            
+            <TabsContent value="notifications">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preferencias de Notificaciones</CardTitle>
+                  <CardDescription>
+                    Configura cómo quieres recibir las notificaciones del sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Notificaciones del sistema</p>
+                        <p className="text-sm text-gray-500">Recibir alertas sobre cambios en el sistema</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Notificaciones de mensajes</p>
+                        <p className="text-sm text-gray-500">Recibir alertas cuando recibas un nuevo mensaje</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Recordatorios</p>
+                        <p className="text-sm text-gray-500">Recibir recordatorios de tareas pendientes</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Notificaciones por correo</p>
+                        <p className="text-sm text-gray-500">Recibir una copia de las notificaciones por correo</p>
+                      </div>
+                      <Switch />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
     </Layout>

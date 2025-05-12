@@ -29,7 +29,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mock users para desarrollo mientras implementamos Supabase Auth
-const mockUsers = [
+export const mockUsers = [
   {
     id: "1",
     email: "admin@convertia.com",
