@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,11 +10,11 @@ import {
 import { Plus, Minus } from "lucide-react";
 
 interface Employee {
-  id: number;
+  id: string; // Changed from number to string to match the database UUID format
   name: string;
   position: string;
   department: string;
-  manager?: number;
+  manager?: string; // Changed from number to string as well
   avatar?: string;
 }
 
@@ -67,15 +66,15 @@ const OrganizationChart: React.FC<OrganizationChartProps> = ({ data }) => {
   // Build map of node positions
   const buildPositionMap = (
     employees: Employee[],
-    rootId: number, 
+    rootId: string, 
     x: number, 
     y: number, 
     availableWidth: number
-  ): Map<number, {x: number, y: number}> => {
-    const positions = new Map<number, {x: number, y: number}>();
+  ): Map<string, {x: number, y: number}> => {
+    const positions = new Map<string, {x: number, y: number}>();
     positions.set(rootId, {x, y});
 
-    const buildChildPositions = (parentId: number, level: number, startX: number, width: number) => {
+    const buildChildPositions = (parentId: string, level: number, startX: number, width: number) => {
       const children = employees.filter(emp => emp.manager === parentId);
       
       if (children.length === 0) return;
@@ -98,7 +97,7 @@ const OrganizationChart: React.FC<OrganizationChartProps> = ({ data }) => {
   // Draw connections between nodes
   const drawConnections = (
     employees: Employee[],
-    positions: Map<number, {x: number, y: number}>
+    positions: Map<string, {x: number, y: number}>
   ) => {
     employees.forEach(employee => {
       if (employee.manager) {

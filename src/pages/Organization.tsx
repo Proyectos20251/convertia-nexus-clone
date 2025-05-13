@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -155,13 +154,12 @@ export default function Organization() {
     setFilterDepartment("");
   };
 
-  // Transform data for organization chart
+  // Transform data for organization chart - Now this will be compatible with the updated Employee interface
   const chartData = employees.map(emp => ({
     id: emp.id,
     name: `${emp.first_name} ${emp.last_name}`,
     position: emp.position || "",
     department: emp.department || "",
-    // For manager, we'll need a way to associate employees with their managers
     manager: null, // This would need to be defined in your database
     avatar: null // This would be the employee's avatar if available
   }));
