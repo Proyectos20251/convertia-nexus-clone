@@ -1,585 +1,710 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle
+} from "@/components/ui/card";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { DateRange } from "react-day-picker";
-import { addDays, format } from "date-fns";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Play, 
+  Square, 
+  Clock, 
+  Calendar, 
+  User,
+  Users,
+  Plus,
+  Eye,
+  Check,
+  X
+} from "lucide-react";
+import { format, parseISO, differenceInHours, differenceInMinutes, isAfter, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays, Clock, PlayCircle, PauseCircle, FileText, RotateCcw, Check, X, CalendarCheck } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { timeManagementService, TimeRecord, TimeStatistics } from "@/services/timeManagementService";
+import { absenceService, Absence } from "@/services/absenceService";
+import { BarChart } from "@/components/ui/chart";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import AbsenceRequestDialog from "@/components/absence/AbsenceRequestDialog";
+import AbsenceApprovalDialog from "@/components/absence/AbsenceApprovalDialog";
+import { Badge } from "@/components/ui/badge";
 
-export default function TimeManagement() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [clockedIn, setClockedIn] = useState(false);
-  const [clockInTime, setClockInTime] = useState<string>("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(2025, 4, 5),
-    to: addDays(new Date(2025, 4, 5), 4),
-  });
+const TimeManagement = () => {
+  const { user, role } = useAuth();
+  const [activeRecord, setActiveRecord] = useState<TimeRecord | null>(null);
+  const [history, setHistory] = useState<TimeRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<TimeRecord[]>([]);
+  const [teamRecords, setTeamRecords] = useState<TimeRecord[]>([]);
+  const [statistics, setStatistics] = useState<TimeStatistics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [clockInDescription, setClockInDescription] = useState("");
+  
+  const [activeTab, setActiveTab] = useState("my-time");
+  const [absencesTab, setAbsencesTab] = useState("my-absences");
+  
+  const [userAbsences, setUserAbsences] = useState<Absence[]>([]);
+  const [teamAbsences, setTeamAbsences] = useState<Absence[]>([]);
+  const [allAbsences, setAllAbsences] = useState<Absence[]>([]);
+  
+  const [absenceRequestDialogOpen, setAbsenceRequestDialogOpen] = useState(false);
+  const [absenceApprovalDialogOpen, setAbsenceApprovalDialogOpen] = useState(false);
+  const [selectedAbsence, setSelectedAbsence] = useState<Absence | null>(null);
+  
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const canViewTeamTime = isAdmin || isManager;
+  const canApproveAbsences = isAdmin || isManager;
 
-  // Mock data for absences
-  const absences = [
-    {
-      id: 1,
-      type: "Vacaciones",
-      startDate: "10/05/2025",
-      endDate: "20/05/2025",
-      status: "approved",
-    },
-    {
-      id: 2,
-      type: "Baja médica",
-      startDate: "01/07/2025",
-      endDate: "02/07/2025",
-      status: "pending",
-    },
-    {
-      id: 3,
-      type: "Permiso personal",
-      startDate: "15/06/2025",
-      endDate: "15/06/2025",
-      status: "rejected",
-      reason: "Alta demanda de trabajo",
-    },
-  ];
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+      loadUserAbsences();
+      
+      if (canViewTeamTime) {
+        if (isAdmin) {
+          loadAllRecords();
+          loadAllAbsences();
+        }
+        if (isManager) {
+          loadTeamRecords();
+          loadTeamAbsences();
+        }
+      }
+    }
+  }, [user, role]);
 
-  // Mock data for time records
-  const timeRecords = [
-    {
-      date: "01/05/2025",
-      clockIn: "09:02",
-      clockOut: "18:05",
-      total: "9h 03m",
-    },
-    {
-      date: "02/05/2025",
-      clockIn: "08:55",
-      clockOut: "17:45",
-      total: "8h 50m",
-    },
-    {
-      date: "03/05/2025",
-      clockIn: "09:15",
-      clockOut: "18:10",
-      total: "8h 55m",
-    },
-    {
-      date: "04/05/2025",
-      clockIn: "08:45",
-      clockOut: "17:30",
-      total: "8h 45m",
-    },
-  ];
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load active record if exists
+      const active = await timeManagementService.getActiveRecord(user!.id);
+      setActiveRecord(active);
+      
+      // Load history
+      const records = await timeManagementService.getUserTimeRecords(user!.id);
+      setHistory(records);
+      
+      // Load statistics
+      const stats = await timeManagementService.calculateUserStatistics(user!.id);
+      setStatistics(stats);
+      
+    } catch (error) {
+      console.error("Error loading time data:", error);
+      toast.error("Error al cargar datos de tiempo");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Function to get today's date and time
-  const getCurrentDateTime = () => {
+  const loadAllRecords = async () => {
+    try {
+      const records = await timeManagementService.getAllTimeRecords();
+      setAllRecords(records);
+    } catch (error) {
+      console.error("Error loading all time records:", error);
+      toast.error("Error al cargar registros de todos los empleados");
+    }
+  };
+
+  const loadTeamRecords = async () => {
+    if (!user) return;
+    
+    try {
+      const records = await timeManagementService.getTeamTimeRecords(user.id);
+      setTeamRecords(records);
+    } catch (error) {
+      console.error("Error loading team time records:", error);
+      toast.error("Error al cargar registros del equipo");
+    }
+  };
+
+  const loadUserAbsences = async () => {
+    if (!user) return;
+    
+    try {
+      const absences = await absenceService.getUserAbsences(user.id);
+      setUserAbsences(absences);
+    } catch (error) {
+      console.error("Error loading user absences:", error);
+      toast.error("Error al cargar ausencias");
+    }
+  };
+
+  const loadTeamAbsences = async () => {
+    if (!user) return;
+    
+    try {
+      const absences = await absenceService.getTeamAbsences(user.id);
+      setTeamAbsences(absences);
+    } catch (error) {
+      console.error("Error loading team absences:", error);
+      toast.error("Error al cargar ausencias del equipo");
+    }
+  };
+
+  const loadAllAbsences = async () => {
+    try {
+      const absences = await absenceService.getAllAbsences();
+      setAllAbsences(absences);
+    } catch (error) {
+      console.error("Error loading all absences:", error);
+      toast.error("Error al cargar todas las ausencias");
+    }
+  };
+
+  const handleClockIn = async () => {
+    if (!user) return;
+    
+    try {
+      const record = await timeManagementService.clockIn(user.id, clockInDescription || undefined);
+      setActiveRecord(record);
+      setClockInDescription("");
+      toast.success("Has iniciado tu jornada");
+    } catch (error) {
+      console.error("Error clocking in:", error);
+      toast.error("Error al iniciar jornada");
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!activeRecord) return;
+    
+    try {
+      await timeManagementService.clockOut(activeRecord.id);
+      toast.success("Has finalizado tu jornada");
+      
+      // Reload data
+      loadUserData();
+    } catch (error) {
+      console.error("Error clocking out:", error);
+      toast.error("Error al finalizar jornada");
+    }
+  };
+
+  const handleRequestAbsence = () => {
+    setAbsenceRequestDialogOpen(true);
+  };
+
+  const handleAbsenceRequestClose = (refetch?: boolean) => {
+    setAbsenceRequestDialogOpen(false);
+    if (refetch) {
+      loadUserAbsences();
+      if (isAdmin) loadAllAbsences();
+      if (isManager) loadTeamAbsences();
+    }
+  };
+
+  const handleViewAbsence = (absence: Absence) => {
+    setSelectedAbsence(absence);
+    setAbsenceApprovalDialogOpen(true);
+  };
+
+  const handleAbsenceApprovalClose = (refetch?: boolean) => {
+    setAbsenceApprovalDialogOpen(false);
+    setSelectedAbsence(null);
+    if (refetch) {
+      loadUserAbsences();
+      if (isAdmin) loadAllAbsences();
+      if (isManager) loadTeamAbsences();
+    }
+  };
+
+  const formatDuration = (checkIn: string, checkOut: string | null) => {
+    if (!checkOut) {
+      const now = new Date();
+      const start = parseISO(checkIn);
+      const hours = differenceInHours(now, start);
+      const minutes = differenceInMinutes(now, start) % 60;
+      return `${hours}h ${minutes}m`;
+    }
+    
+    const start = parseISO(checkIn);
+    const end = parseISO(checkOut);
+    const hours = differenceInHours(end, start);
+    const minutes = differenceInMinutes(end, start) % 60;
+    return `${hours}h ${minutes}m`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    return format(parseISO(dateStr), "dd/MM/yyyy", { locale: es });
+  };
+
+  const getAbsenceStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500">Aprobada</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500">Rechazada</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-gray-500">Cancelada</Badge>;
+      default:
+        return <Badge className="bg-amber-500">Pendiente</Badge>;
+    }
+  };
+
+  const isAbsenceActive = (absence: Absence) => {
     const now = new Date();
-    const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    return time;
+    const startDate = parseISO(absence.start_date);
+    const endDate = parseISO(absence.end_date);
+    
+    return (
+      absence.status === 'approved' && 
+      !isBefore(endDate, now) && 
+      !isAfter(startDate, now)
+    );
   };
 
-  // Handle clock in/out
-  const handleClockInOut = () => {
-    if (clockedIn) {
-      setClockedIn(false);
-      toast.success("Has registrado tu salida a las " + getCurrentDateTime());
-    } else {
-      const time = getCurrentDateTime();
-      setClockedIn(true);
-      setClockInTime(time);
-      toast.success("Has registrado tu entrada a las " + time);
+  const chartData = statistics ? {
+    labels: statistics.weeklyHours.map(d => d.day),
+    datasets: [
+      {
+        label: "Horas",
+        data: statistics.weeklyHours.map(d => d.hours),
+        backgroundColor: "rgba(37, 99, 235, 0.8)",
+      },
+    ],
+  } : undefined;
+
+  const renderTimeRecords = (records: TimeRecord[]) => {
+    if (records.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={5} className="text-center py-6">
+            No hay registros para mostrar
+          </TableCell>
+        </TableRow>
+      );
     }
+
+    return records.map((record) => (
+      <TableRow key={record.id}>
+        <TableCell>
+          {record.employee ? 
+            `${record.employee.first_name} ${record.employee.last_name}` : 
+            "Tu registro"}
+        </TableCell>
+        <TableCell>{format(parseISO(record.check_in), "dd/MM/yyyy HH:mm", { locale: es })}</TableCell>
+        <TableCell>
+          {record.check_out 
+            ? format(parseISO(record.check_out), "dd/MM/yyyy HH:mm", { locale: es }) 
+            : "En curso"}
+        </TableCell>
+        <TableCell>{formatDuration(record.check_in, record.check_out)}</TableCell>
+        <TableCell>{record.description || "-"}</TableCell>
+      </TableRow>
+    ));
   };
 
-  // Submit time off request
-  const handleSubmitTimeOff = () => {
-    if (dateRange?.from && dateRange?.to) {
-      toast.success("Solicitud de ausencia enviada correctamente");
-    } else {
-      toast.error("Por favor selecciona un rango de fechas");
+  const renderAbsences = (absences: Absence[], canApprove: boolean = false) => {
+    if (absences.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={canApprove ? 6 : 5} className="text-center py-6">
+            No hay ausencias para mostrar
+          </TableCell>
+        </TableRow>
+      );
     }
+
+    return absences.map((absence) => (
+      <TableRow 
+        key={absence.id}
+        className={isAbsenceActive(absence) ? "bg-green-50" : ""}
+      >
+        {canApprove && (
+          <TableCell>
+            {absence.profile?.full_name || "Usuario"}
+          </TableCell>
+        )}
+        <TableCell>{absence.absence_type?.name || "Ausencia"}</TableCell>
+        <TableCell>{formatDate(absence.start_date)}</TableCell>
+        <TableCell>{formatDate(absence.end_date)}</TableCell>
+        <TableCell>{getAbsenceStatusBadge(absence.status)}</TableCell>
+        <TableCell>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleViewAbsence(absence)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          
+          {canApprove && absence.status === 'pending' && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="text-green-500"
+                onClick={() => {
+                  setSelectedAbsence(absence);
+                  absenceService.approveAbsence(absence.id).then(() => {
+                    toast.success("Ausencia aprobada");
+                    if (isAdmin) loadAllAbsences();
+                    if (isManager) loadTeamAbsences();
+                  });
+                }}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="text-red-500"
+                onClick={() => {
+                  setSelectedAbsence(absence);
+                  absenceService.rejectAbsence(absence.id).then(() => {
+                    toast.success("Ausencia rechazada");
+                    if (isAdmin) loadAllAbsences();
+                    if (isManager) loadTeamAbsences();
+                  });
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </TableCell>
+      </TableRow>
+    ));
   };
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Gestión del Tiempo</h1>
-
-        <Tabs defaultValue="registro" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
-            <TabsTrigger value="registro">Registro</TabsTrigger>
-            <TabsTrigger value="ausencias">Ausencias</TabsTrigger>
-            <TabsTrigger value="informes">Informes</TabsTrigger>
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-6">Gestión de Tiempo</h1>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="my-time">
+              <Clock className="h-4 w-4 mr-2" />
+              Control de Tiempo
+            </TabsTrigger>
+            
+            <TabsTrigger value="absences">
+              <Calendar className="h-4 w-4 mr-2" />
+              Ausencias y Permisos
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="registro">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
+          {/* Control de Tiempo Tab */}
+          <TabsContent value="my-time">
+            <Tabs value={canViewTeamTime ? "my-records" : "records"} onValueChange={() => {}}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="my-records" onClick={() => setActiveTab("my-time")}>
+                  <User className="h-4 w-4 mr-2" />
+                  Mi Tiempo
+                </TabsTrigger>
+                
+                {canViewTeamTime && (
+                  <TabsTrigger value="team-records" onClick={() => setActiveTab("team-time")}>
+                    <Users className="h-4 w-4 mr-2" />
+                    {isAdmin ? "Todos los Empleados" : "Mi Equipo"}
+                  </TabsTrigger>
+                )}
+              </TabsList>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg font-medium">Calendario</CardTitle>
-                    <CardDescription>Mayo 2025</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      className="rounded-md border"
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div>
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-medium">
-                      Registro de hoy
-                    </CardTitle>
+                    <CardTitle>Control de Jornada</CardTitle>
                     <CardDescription>
-                      {format(new Date(), "EEEE, d 'de' MMMM", {locale: es})}
+                      Registra tu entrada y salida diaria
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex flex-col items-center">
-                    <div className="w-40 h-40 rounded-full border-8 border-gray-100 flex items-center justify-center mb-6">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-gray-700">
-                          {clockedIn ? clockInTime : "--:--"}
+                  <CardContent>
+                    {activeRecord ? (
+                      <div>
+                        <div className="flex items-center mb-4 text-green-600">
+                          <Clock className="h-5 w-5 mr-2" />
+                          <span className="font-medium">
+                            Jornada iniciada: {format(parseISO(activeRecord.check_in), "dd/MM/yyyy HH:mm", { locale: es })}
+                          </span>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {clockedIn ? "Entrada" : "No registrado"}
+                        
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-500 mb-1">Duración actual:</p>
+                          <p className="text-2xl font-bold">
+                            {formatDuration(activeRecord.check_in, null)}
+                          </p>
                         </div>
+                        
+                        {activeRecord.description && (
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-500 mb-1">Descripción:</p>
+                            <p className="text-sm">{activeRecord.description}</p>
+                          </div>
+                        )}
+                        
+                        <Button onClick={handleClockOut} className="w-full">
+                          <Square className="h-4 w-4 mr-2" />
+                          Finalizar Jornada
+                        </Button>
                       </div>
-                    </div>
-                    
-                    <Button 
-                      className="w-full mb-4"
-                      variant={clockedIn ? "destructive" : "default"}
-                      onClick={handleClockInOut}
-                    >
-                      {clockedIn ? (
-                        <>
-                          <PauseCircle className="h-4 w-4 mr-2" />
-                          Registrar salida
-                        </>
-                      ) : (
-                        <>
-                          <PlayCircle className="h-4 w-4 mr-2" />
-                          Registrar entrada
-                        </>
-                      )}
-                    </Button>
-                    
-                    {clockedIn && (
-                      <div className="text-center text-sm text-gray-500 mt-4">
-                        Entrada registrada a las {clockInTime}
+                    ) : (
+                      <div>
+                        <p className="mb-4 text-gray-600">
+                          No tienes ninguna jornada activa. Inicia tu jornada laboral.
+                        </p>
+                        
+                        <div className="mb-4">
+                          <Textarea
+                            placeholder="Descripción (opcional)"
+                            value={clockInDescription}
+                            onChange={(e) => setClockInDescription(e.target.value)}
+                            className="mb-2"
+                          />
+                        </div>
+                        
+                        <Button onClick={handleClockIn} className="w-full">
+                          <Play className="h-4 w-4 mr-2" />
+                          Iniciar Jornada
+                        </Button>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-medium">Resumen semanal</CardTitle>
-                    <CardDescription>Esta semana</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Horas trabajadas</span>
-                          <span className="text-sm font-medium">35h 33m / 40h</span>
-                        </div>
-                        <Progress value={89} />
-                        <div className="text-xs text-gray-500">
-                          89% de la jornada semanal completada
-                        </div>
-                      </div>
-                      
-                      <div className="border rounded-md p-4">
-                        <h3 className="text-sm font-medium mb-3">
-                          Últimos registros
-                        </h3>
-                        <div className="space-y-3">
-                          {timeRecords.slice(0, 3).map((record, index) => (
-                            <div key={index} className="flex justify-between items-center">
-                              <div>
-                                <div className="text-sm font-medium">{record.date}</div>
-                                <div className="text-xs text-gray-500">
-                                  {record.clockIn} - {record.clockOut}
-                                </div>
-                              </div>
-                              <Badge variant="outline">{record.total}</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-                        
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">Historial de registros</CardTitle>
-                <CardDescription>
-                  Registro completo de entradas y salidas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-xs uppercase tracking-wider border-b text-gray-500">
-                        <th className="py-3 px-4 text-left">Fecha</th>
-                        <th className="py-3 px-4 text-left">Entrada</th>
-                        <th className="py-3 px-4 text-left">Salida</th>
-                        <th className="py-3 px-4 text-left">Tiempo total</th>
-                        <th className="py-3 px-4 text-left">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timeRecords.map((record, index) => (
-                        <tr key={index} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="font-medium">{record.date}</div>
-                          </td>
-                          <td className="py-3 px-4">{record.clockIn}</td>
-                          <td className="py-3 px-4">{record.clockOut}</td>
-                          <td className="py-3 px-4">{record.total}</td>
-                          <td className="py-3 px-4">
-                            <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
-                              Completado
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="ausencias">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <div>
-                      <CardTitle className="text-lg font-medium">Ausencias</CardTitle>
-                      <CardDescription>
-                        Solicitudes y registro de ausencias
-                      </CardDescription>
-                    </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <CalendarDays className="h-4 w-4 mr-2" />
-                          Solicitar ausencia
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                          <DialogTitle>Solicitud de ausencia</DialogTitle>
-                          <DialogDescription>
-                            Complete los detalles para solicitar un nuevo periodo de ausencia.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Tipo de ausencia</label>
-                            <Select>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un tipo" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="vacation">Vacaciones</SelectItem>
-                                <SelectItem value="sick">Baja por enfermedad</SelectItem>
-                                <SelectItem value="personal">Permiso personal</SelectItem>
-                                <SelectItem value="other">Otro</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Periodo</label>
-                            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Justificación (opcional)</label>
-                            <Input placeholder="Detalles sobre la ausencia" />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline">Cancelar</Button>
-                          <Button onClick={handleSubmitTimeOff}>Enviar solicitud</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-xs uppercase tracking-wider border-b text-gray-500">
-                            <th className="py-3 px-4 text-left">Tipo</th>
-                            <th className="py-3 px-4 text-left">Fechas</th>
-                            <th className="py-3 px-4 text-left">Estado</th>
-                            <th className="py-3 px-4 text-left">Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {absences.map((absence) => (
-                            <tr key={absence.id} className="border-b hover:bg-gray-50">
-                              <td className="py-3 px-4">
-                                <div className="font-medium">{absence.type}</div>
-                              </td>
-                              <td className="py-3 px-4">
-                                {absence.startDate} al {absence.endDate}
-                              </td>
-                              <td className="py-3 px-4">
-                                {absence.status === "approved" ? (
-                                  <Badge className="bg-green-100 text-green-800">Aprobado</Badge>
-                                ) : absence.status === "pending" ? (
-                                  <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
-                                ) : (
-                                  <Badge className="bg-red-100 text-red-800">Rechazado</Badge>
-                                )}
-                              </td>
-                              <td className="py-3 px-4 flex gap-2">
-                                {absence.status === "pending" && (
-                                  <>
-                                    <Button size="sm" variant="outline">
-                                      <FileText className="h-3.5 w-3.5" />
-                                      <span className="sr-only">Ver detalles</span>
-                                    </Button>
-                                    <Button size="sm" variant="outline">
-                                      <RotateCcw className="h-3.5 w-3.5" />
-                                      <span className="sr-only">Cancelar</span>
-                                    </Button>
-                                  </>
-                                )}
-                                {absence.status !== "pending" && (
-                                  <Button size="sm" variant="outline">
-                                    <FileText className="h-3.5 w-3.5" />
-                                    <span className="sr-only">Ver detalles</span>
-                                  </Button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-medium">Días disponibles</CardTitle>
-                    <CardDescription>Saldos actuales</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium">Vacaciones</span>
-                        <span className="text-sm font-medium">18 / 22 días</span>
-                      </div>
-                      <Progress value={18 / 22 * 100} />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium">Días personales</span>
-                        <span className="text-sm font-medium">2 / 3 días</span>
-                      </div>
-                      <Progress value={2/3 * 100} />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <h3 className="text-sm font-medium mb-3">Próximas ausencias</h3>
-                      {absences
-                        .filter(a => a.status === "approved")
-                        .map((absence) => (
-                          <div key={absence.id} className="flex items-center mb-2 text-sm">
-                            <CalendarCheck className="h-4 w-4 mr-2 text-green-600" />
-                            <span>{absence.type}: {absence.startDate} - {absence.endDate}</span>
-                          </div>
-                        ))}
-                    </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="mt-6">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg font-medium">Solicitudes pendientes</CardTitle>
+                    <CardTitle>Resumen Mensual</CardTitle>
+                    <CardDescription>
+                      Estadísticas de los últimos 30 días
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {absences.filter(a => a.status === "pending").length > 0 ? (
-                      absences
-                        .filter(a => a.status === "pending")
-                        .map((absence) => (
-                          <div key={absence.id} className="flex justify-between items-center p-3 border rounded-md mb-2">
-                            <div>
-                              <div className="font-medium">{absence.type}</div>
-                              <div className="text-sm text-gray-500">
-                                {absence.startDate} - {absence.endDate}
-                              </div>
-                            </div>
-                            <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
-                          </div>
-                        ))
+                    {loading ? (
+                      <p>Cargando estadísticas...</p>
+                    ) : !statistics ? (
+                      <p>No hay datos disponibles</p>
                     ) : (
-                      <p className="text-sm text-gray-500 text-center py-4">
-                        No hay solicitudes pendientes
-                      </p>
+                      <div>
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                          <div>
+                            <p className="text-sm text-gray-500">Total de Horas</p>
+                            <p className="text-2xl font-bold">{statistics.totalHours}h</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Promedio Diario</p>
+                            <p className="text-2xl font-bold">{statistics.averageHoursPerDay}h</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Días Registrados</p>
+                            <p className="text-2xl font-bold">{statistics.totalDays}</p>
+                          </div>
+                        </div>
+                        
+                        {chartData && (
+                          <div className="h-60">
+                            <BarChart data={chartData} />
+                          </div>
+                        )}
+                      </div>
                     )}
                   </CardContent>
                 </Card>
               </div>
-            </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Historial de Jornadas</CardTitle>
+                  <CardDescription>
+                    Tus registros recientes de tiempo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuario</TableHead>
+                          <TableHead>Entrada</TableHead>
+                          <TableHead>Salida</TableHead>
+                          <TableHead>Duración</TableHead>
+                          <TableHead>Descripción</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loading ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-6">
+                              Cargando registros...
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          renderTimeRecords(history)
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {canViewTeamTime && activeTab === "team-time" && (
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle>
+                      {isAdmin ? "Registros de Todos los Empleados" : "Registros de Mi Equipo"}
+                    </CardTitle>
+                    <CardDescription>
+                      {isAdmin 
+                        ? "Visualiza y gestiona el tiempo de todos los empleados" 
+                        : "Visualiza el tiempo de los miembros de tu equipo"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Usuario</TableHead>
+                            <TableHead>Entrada</TableHead>
+                            <TableHead>Salida</TableHead>
+                            <TableHead>Duración</TableHead>
+                            <TableHead>Descripción</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {isAdmin ? (
+                            renderTimeRecords(allRecords)
+                          ) : (
+                            renderTimeRecords(teamRecords)
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </Tabs>
           </TabsContent>
           
-          <TabsContent value="informes">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">Informes de tiempo</CardTitle>
-                <CardDescription>
-                  Análisis y resúmenes de tus registros de tiempo
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-medium">Este mes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Días trabajados:</span>
-                          <span className="font-medium">18 días</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Horas totales:</span>
-                          <span className="font-medium">144 horas</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Horas extra:</span>
-                          <span className="font-medium">4.5 horas</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Ausencias:</span>
-                          <span className="font-medium">2 días</span>
-                        </div>
-                      </div>
-                      <Button className="w-full mt-4" variant="outline">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver informe detallado
-                      </Button>
-                    </CardContent>
-                  </Card>
+          {/* Ausencias Tab */}
+          <TabsContent value="absences">
+            <Tabs value={absencesTab} onValueChange={setAbsencesTab}>
+              <div className="flex justify-between items-center mb-4">
+                <TabsList>
+                  <TabsTrigger value="my-absences">
+                    <User className="h-4 w-4 mr-2" />
+                    Mis Ausencias
+                  </TabsTrigger>
                   
+                  {canApproveAbsences && (
+                    <TabsTrigger value="team-absences">
+                      <Users className="h-4 w-4 mr-2" />
+                      {isAdmin ? "Todas las Ausencias" : "Ausencias del Equipo"}
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+                
+                <Button onClick={handleRequestAbsence}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Solicitar Ausencia
+                </Button>
+              </div>
+              
+              <TabsContent value="my-absences">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Mis Ausencias y Permisos</CardTitle>
+                    <CardDescription>
+                      Historial de solicitudes y estado
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Fecha Inicio</TableHead>
+                            <TableHead>Fecha Fin</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Acciones</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {renderAbsences(userAbsences)}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {canApproveAbsences && (
+                <TabsContent value="team-absences">
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-medium">Este año</CardTitle>
+                    <CardHeader>
+                      <CardTitle>
+                        {isAdmin ? "Todas las Ausencias" : "Ausencias del Equipo"}
+                      </CardTitle>
+                      <CardDescription>
+                        {isAdmin 
+                          ? "Gestionar ausencias de todos los empleados" 
+                          : "Gestionar ausencias de tu equipo"}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Días trabajados:</span>
-                          <span className="font-medium">85 días</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Horas totales:</span>
-                          <span className="font-medium">680 horas</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Vacaciones tomadas:</span>
-                          <span className="font-medium">4 días</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Días personales:</span>
-                          <span className="font-medium">1 día</span>
-                        </div>
-                      </div>
-                      <Button className="w-full mt-4" variant="outline">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Ver informe detallado
-                      </Button>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base font-medium">Informes personalizados</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Genera informes personalizados seleccionando el periodo y el tipo de informe.
-                      </p>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium">Periodo</label>
-                          <Select defaultValue="month">
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="week">Semanal</SelectItem>
-                              <SelectItem value="month">Mensual</SelectItem>
-                              <SelectItem value="quarter">Trimestral</SelectItem>
-                              <SelectItem value="year">Anual</SelectItem>
-                              <SelectItem value="custom">Personalizado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Tipo de informe</label>
-                          <Select defaultValue="all">
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Completo</SelectItem>
-                              <SelectItem value="hours">Solo horas</SelectItem>
-                              <SelectItem value="absences">Solo ausencias</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button className="w-full">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Generar informe
-                        </Button>
+                      <div className="rounded-md border overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Empleado</TableHead>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead>Fecha Inicio</TableHead>
+                              <TableHead>Fecha Fin</TableHead>
+                              <TableHead>Estado</TableHead>
+                              <TableHead>Acciones</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {isAdmin 
+                              ? renderAbsences(allAbsences, true)
+                              : renderAbsences(teamAbsences, true)}
+                          </TableBody>
+                        </Table>
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              </CardContent>
-            </Card>
+                </TabsContent>
+              )}
+            </Tabs>
           </TabsContent>
         </Tabs>
+        
+        <AbsenceRequestDialog 
+          open={absenceRequestDialogOpen} 
+          onClose={handleAbsenceRequestClose} 
+        />
+        
+        <AbsenceApprovalDialog 
+          open={absenceApprovalDialogOpen} 
+          onClose={handleAbsenceApprovalClose} 
+          absence={selectedAbsence}
+        />
       </div>
     </Layout>
   );
-}
+};
+
+export default TimeManagement;
