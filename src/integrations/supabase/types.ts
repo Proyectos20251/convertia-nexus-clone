@@ -203,6 +203,51 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_employees: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          employment_type: string
+          first_name: string
+          id: string
+          last_name: string
+          position: string | null
+          status: string
+          team: string | null
+          updated_at: string
+          work_location: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email: string
+          employment_type?: string
+          first_name: string
+          id?: string
+          last_name: string
+          position?: string | null
+          status?: string
+          team?: string | null
+          updated_at?: string
+          work_location: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          employment_type?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          position?: string | null
+          status?: string
+          team?: string | null
+          updated_at?: string
+          work_location?: string
+        }
+        Relationships: []
+      }
       performance_reviews: {
         Row: {
           comments: string | null
@@ -293,6 +338,33 @@ export type Database = {
           check_out?: string | null
           created_at?: string
           description?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          can_assign_permissions: boolean
+          can_edit_employees: boolean
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_assign_permissions?: boolean
+          can_edit_employees?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_assign_permissions?: boolean
+          can_edit_employees?: boolean
+          created_at?: string
           id?: string
           updated_at?: string
           user_id?: string
