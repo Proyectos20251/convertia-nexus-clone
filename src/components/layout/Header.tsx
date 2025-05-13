@@ -42,7 +42,12 @@ export default function Header() {
   return (
     <header className="h-16 bg-white border-b px-4 flex items-center justify-between sticky top-0 z-10">
       <div className="md:pl-[250px] transition-all duration-300 flex items-center">
-        <img src="/logo.png" alt="Convert-IA" className="h-8 mr-2" />
+        <img 
+          src="/lovable-uploads/91758d37-d41c-4b09-951e-88bd39ce5651.png" 
+          alt="Convert-IA" 
+          className="h-9 w-9 mr-2" 
+        />
+        <span className="font-bold text-teal-950">Convert-IA</span>
       </div>
 
       <div className="flex items-center space-x-4">

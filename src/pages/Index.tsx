@@ -39,9 +39,9 @@ export default function Index() {
           </div>
           <div className="md:w-1/2">
             <img 
-              src="/logo-convertia.png" 
+              src="/lovable-uploads/91758d37-d41c-4b09-951e-88bd39ce5651.png" 
               alt="Convert-IA Platform" 
-              className="w-full md:max-w-lg mx-auto"
+              className="w-64 h-64 mx-auto"
             />
           </div>
         </div>
