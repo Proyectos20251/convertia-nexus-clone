@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TimeRecord {
@@ -106,14 +105,7 @@ export const timeManagementService = {
   async getAllTimeRecords(limit?: number): Promise<TimeRecord[]> {
     const query = supabase
       .from('time_records')
-      .select(`
-        *,
-        profiles!user_id(
-          full_name,
-          department,
-          position
-        )
-      `)
+      .select('*')
       .order('check_in', { ascending: false });
 
     if (limit) {
@@ -127,18 +119,38 @@ export const timeManagementService = {
       throw error;
     }
 
-    // Transform the data to match the expected format
-    const transformedData = data?.map(record => ({
-      ...record,
-      employee: record.profiles ? {
-        first_name: record.profiles.full_name?.split(' ')[0] || '',
-        last_name: record.profiles.full_name?.split(' ').slice(1).join(' ') || '',
-        department: record.profiles.department,
-        position: record.profiles.position
-      } : undefined
-    }));
+    if (!data || data.length === 0) {
+      return [];
+    }
 
-    return transformedData || [];
+    // Get unique user IDs
+    const userIds = [...new Set(data.map(record => record.user_id))];
+    
+    // Fetch profiles for these users
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, department, position')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+    }
+
+    // Transform the data to match the expected format
+    const transformedData = data.map(record => {
+      const profile = profiles?.find(p => p.id === record.user_id);
+      return {
+        ...record,
+        employee: profile ? {
+          first_name: profile.full_name?.split(' ')[0] || '',
+          last_name: profile.full_name?.split(' ').slice(1).join(' ') || '',
+          department: profile.department,
+          position: profile.position
+        } : undefined
+      };
+    });
+
+    return transformedData;
   },
 
   // Get time records for team members (manager only)
@@ -180,14 +192,7 @@ export const timeManagementService = {
     
     const query = supabase
       .from('time_records')
-      .select(`
-        *,
-        profiles!user_id(
-          full_name,
-          department,
-          position
-        )
-      `)
+      .select('*')
       .in('user_id', teamMemberIds)
       .order('check_in', { ascending: false });
 
@@ -202,18 +207,35 @@ export const timeManagementService = {
       throw error;
     }
 
-    // Transform the data to match the expected format
-    const transformedData = data?.map(record => ({
-      ...record,
-      employee: record.profiles ? {
-        first_name: record.profiles.full_name?.split(' ')[0] || '',
-        last_name: record.profiles.full_name?.split(' ').slice(1).join(' ') || '',
-        department: record.profiles.department,
-        position: record.profiles.position
-      } : undefined
-    }));
+    if (!data || data.length === 0) {
+      return [];
+    }
 
-    return transformedData || [];
+    // Fetch profiles for team members
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, department, position')
+      .in('id', teamMemberIds);
+
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+    }
+
+    // Transform the data to match the expected format
+    const transformedData = data.map(record => {
+      const profile = profiles?.find(p => p.id === record.user_id);
+      return {
+        ...record,
+        employee: profile ? {
+          first_name: profile.full_name?.split(' ')[0] || '',
+          last_name: profile.full_name?.split(' ').slice(1).join(' ') || '',
+          department: profile.department,
+          position: profile.position
+        } : undefined
+      };
+    });
+
+    return transformedData;
   },
 
   // Calculate time statistics for a user

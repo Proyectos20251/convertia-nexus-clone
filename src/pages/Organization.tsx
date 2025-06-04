@@ -345,9 +345,21 @@ const Organization = () => {
         </Tabs>
         
         <EmployeeDialog 
-          open={dialogOpen} 
+          isOpen={dialogOpen} 
           onClose={handleDialogClose} 
           employee={currentEmployee} 
+          onSave={async (employeeData) => {
+            try {
+              if (currentEmployee) {
+                await employeeService.updateEmployee(currentEmployee.id, employeeData);
+              } else {
+                await employeeService.createEmployee(employeeData as Omit<Employee, 'id' | 'created_at' | 'updated_at'>);
+              }
+              handleDialogClose(true);
+            } catch (error) {
+              throw error;
+            }
+          }}
         />
       </div>
     </Layout>
