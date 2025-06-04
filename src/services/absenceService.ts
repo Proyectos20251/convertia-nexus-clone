@@ -67,7 +67,7 @@ export const absenceService = {
       })
       .select(`
         *,
-        absence_type:type_id(*)
+        absence_types!type_id(*)
       `)
       .single();
 
@@ -85,7 +85,7 @@ export const absenceService = {
       .from('absences')
       .select(`
         *,
-        absence_type:type_id(*)
+        absence_types!type_id(*)
       `)
       .eq('user_id', userId)
       .order('start_date', { ascending: false });
@@ -138,8 +138,8 @@ export const absenceService = {
       .from('absences')
       .select(`
         *,
-        absence_type:type_id(*),
-        profile:user_id(
+        absence_types!type_id(*),
+        profiles!user_id(
           full_name,
           department,
           position
@@ -162,8 +162,8 @@ export const absenceService = {
       .from('absences')
       .select(`
         *,
-        absence_type:type_id(*),
-        profile:user_id(
+        absence_types!type_id(*),
+        profiles!user_id(
           full_name,
           department,
           position

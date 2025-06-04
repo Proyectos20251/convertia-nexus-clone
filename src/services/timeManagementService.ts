@@ -108,9 +108,8 @@ export const timeManagementService = {
       .from('time_records')
       .select(`
         *,
-        employee:user_id(
-          first_name,
-          last_name,
+        profiles!user_id(
+          full_name,
           department,
           position
         )
@@ -128,7 +127,18 @@ export const timeManagementService = {
       throw error;
     }
 
-    return data || [];
+    // Transform the data to match the expected format
+    const transformedData = data?.map(record => ({
+      ...record,
+      employee: record.profiles ? {
+        first_name: record.profiles.full_name?.split(' ')[0] || '',
+        last_name: record.profiles.full_name?.split(' ').slice(1).join(' ') || '',
+        department: record.profiles.department,
+        position: record.profiles.position
+      } : undefined
+    }));
+
+    return transformedData || [];
   },
 
   // Get time records for team members (manager only)
@@ -172,9 +182,8 @@ export const timeManagementService = {
       .from('time_records')
       .select(`
         *,
-        employee:user_id(
-          first_name,
-          last_name,
+        profiles!user_id(
+          full_name,
           department,
           position
         )
@@ -193,7 +202,18 @@ export const timeManagementService = {
       throw error;
     }
 
-    return data || [];
+    // Transform the data to match the expected format
+    const transformedData = data?.map(record => ({
+      ...record,
+      employee: record.profiles ? {
+        first_name: record.profiles.full_name?.split(' ')[0] || '',
+        last_name: record.profiles.full_name?.split(' ').slice(1).join(' ') || '',
+        department: record.profiles.department,
+        position: record.profiles.position
+      } : undefined
+    }));
+
+    return transformedData || [];
   },
 
   // Calculate time statistics for a user

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { 
@@ -40,7 +39,7 @@ import { es } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
 import { timeManagementService, TimeRecord, TimeStatistics } from "@/services/timeManagementService";
 import { absenceService, Absence } from "@/services/absenceService";
-import { BarChart } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import AbsenceRequestDialog from "@/components/absence/AbsenceRequestDialog";
@@ -513,11 +512,17 @@ const TimeManagement = () => {
                           </div>
                         </div>
                         
-                        {chartData && (
-                          <div className="h-60">
-                            <BarChart data={chartData} />
-                          </div>
-                        )}
+                        <div className="h-60">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={statistics.weeklyHours}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="day" />
+                              <YAxis />
+                              <Tooltip />
+                              <Bar dataKey="hours" fill="#2563eb" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     )}
                   </CardContent>
