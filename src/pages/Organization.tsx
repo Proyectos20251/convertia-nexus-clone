@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,8 +33,8 @@ const Organization = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterLocation, setFilterLocation] = useState("");
-  const [filterDepartment, setFilterDepartment] = useState("");
+  const [filterLocation, setFilterLocation] = useState("all-locations");
+  const [filterDepartment, setFilterDepartment] = useState("all-departments");
   const [locations, setLocations] = useState<string[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,11 +89,11 @@ const Organization = () => {
       );
     }
     
-    if (filterLocation) {
+    if (filterLocation && filterLocation !== "all-locations") {
       result = result.filter(emp => emp.work_location === filterLocation);
     }
     
-    if (filterDepartment) {
+    if (filterDepartment && filterDepartment !== "all-departments") {
       result = result.filter(emp => emp.department === filterDepartment);
     }
     
@@ -178,8 +177,8 @@ const Organization = () => {
   // Reset filters
   const resetFilters = () => {
     setSearchQuery("");
-    setFilterLocation("");
-    setFilterDepartment("");
+    setFilterLocation("all-locations");
+    setFilterDepartment("all-departments");
   };
 
   // Transform data for organization chart - Now this will be compatible with the updated Employee interface
@@ -232,7 +231,7 @@ const Organization = () => {
                         <SelectValue placeholder="Ubicación" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas las ubicaciones</SelectItem>
+                        <SelectItem value="all-locations">Todas las ubicaciones</SelectItem>
                         {locations.map(location => (
                           <SelectItem key={location} value={location}>{location}</SelectItem>
                         ))}
@@ -244,7 +243,7 @@ const Organization = () => {
                         <SelectValue placeholder="Departamento" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos los departamentos</SelectItem>
+                        <SelectItem value="all-departments">Todos los departamentos</SelectItem>
                         {departments.map(dept => (
                           <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                         ))}
