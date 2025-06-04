@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -31,7 +30,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { absenceService, AbsenceType } from "@/services/absenceService";
-import { CalendarDateRangePicker } from "@/components/ui/date-range-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
@@ -171,9 +170,9 @@ const AbsenceRequestDialog: React.FC<AbsenceRequestDialogProps> = ({
                 <FormItem>
                   <FormLabel>Periodo</FormLabel>
                   <FormControl>
-                    <CalendarDateRangePicker
+                    <DatePickerWithRange
                       date={field.value as DateRange}
-                      setDate={(range: DateRange) => field.onChange(range)}
+                      setDate={(range: DateRange | undefined) => field.onChange(range)}
                     />
                   </FormControl>
                   <FormMessage />
