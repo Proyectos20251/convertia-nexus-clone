@@ -93,7 +93,9 @@ export default function EmployeeDialog({ isOpen, onClose, employee, onSave }: Em
   }, [employee, isOpen]);
 
   const handleChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    // Convert "no-department" back to empty string for the form data
+    const finalValue = field === "department" && value === "no-department" ? "" : value;
+    setForm(prev => ({ ...prev, [field]: finalValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -219,7 +221,7 @@ export default function EmployeeDialog({ isOpen, onClose, employee, onSave }: Em
               <div className="space-y-2">
                 <Label htmlFor="department">Departamento</Label>
                 <Select 
-                  value={form.department || ""} 
+                  value={form.department || "no-department"} 
                   onValueChange={(value) => handleChange("department", value)}
                 >
                   <SelectTrigger>
@@ -229,7 +231,7 @@ export default function EmployeeDialog({ isOpen, onClose, employee, onSave }: Em
                     {departments.map((dept) => (
                       <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                     ))}
-                    <SelectItem value="">Sin departamento</SelectItem>
+                    <SelectItem value="no-department">Sin departamento</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
