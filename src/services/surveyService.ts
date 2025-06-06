@@ -11,7 +11,7 @@ export interface Survey {
   created_by: string;
   created_at: string;
   expires_at: string | null;
-  response?: SurveyResponse;
+  responses?: SurveyResponse[];
 }
 
 export interface SurveyResponse {
@@ -23,26 +23,41 @@ export interface SurveyResponse {
 }
 
 export const surveyService = {
-  // Get active surveys
+  // Get active surveys with user's responses
   async getActiveSurveys(): Promise<Survey[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuario no autenticado");
 
-    const { data, error } = await supabase
+    // First get surveys
+    const { data: surveys, error: surveysError } = await supabase
       .from('surveys')
-      .select(`
-        *,
-        response:survey_responses(*)
-      `)
+      .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Error fetching surveys:", error);
-      throw error;
+    if (surveysError) {
+      console.error("Error fetching surveys:", surveysError);
+      throw surveysError;
     }
 
-    return data || [];
+    // Then get user's responses for these surveys
+    const { data: responses, error: responsesError } = await supabase
+      .from('survey_responses')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (responsesError) {
+      console.error("Error fetching responses:", responsesError);
+      throw responsesError;
+    }
+
+    // Combine surveys with responses
+    const surveysWithResponses = surveys?.map(survey => ({
+      ...survey,
+      responses: responses?.filter(response => response.survey_id === survey.id) || []
+    })) || [];
+
+    return surveysWithResponses;
   },
 
   // Submit survey response

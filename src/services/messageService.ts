@@ -20,15 +20,11 @@ export interface Message {
 }
 
 export const messageService = {
-  // Get messages for current user
+  // Get messages for current user - simplified without joins for now
   async getUserMessages(userId: string): Promise<Message[]> {
     const { data, error } = await supabase
       .from('messages')
-      .select(`
-        *,
-        sender:profiles!sender_id(full_name),
-        recipient:profiles!recipient_id(full_name)
-      `)
+      .select('*')
       .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: false });
 

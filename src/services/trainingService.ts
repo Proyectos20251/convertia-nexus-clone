@@ -12,7 +12,7 @@ export interface TrainingCourse {
   created_by: string;
   created_at: string;
   updated_at: string;
-  enrollment?: CourseEnrollment;
+  enrollments?: CourseEnrollment[];
 }
 
 export interface CourseEnrollment {
@@ -25,25 +25,40 @@ export interface CourseEnrollment {
 }
 
 export const trainingService = {
-  // Get all courses
+  // Get all courses with user's enrollments
   async getCourses(): Promise<TrainingCourse[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuario no autenticado");
 
-    const { data, error } = await supabase
+    // Get courses
+    const { data: courses, error: coursesError } = await supabase
       .from('training_courses')
-      .select(`
-        *,
-        enrollment:course_enrollments(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Error fetching courses:", error);
-      throw error;
+    if (coursesError) {
+      console.error("Error fetching courses:", coursesError);
+      throw coursesError;
     }
 
-    return data || [];
+    // Get user's enrollments
+    const { data: enrollments, error: enrollmentsError } = await supabase
+      .from('course_enrollments')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (enrollmentsError) {
+      console.error("Error fetching enrollments:", enrollmentsError);
+      throw enrollmentsError;
+    }
+
+    // Combine courses with enrollments
+    const coursesWithEnrollments = courses?.map(course => ({
+      ...course,
+      enrollments: enrollments?.filter(enrollment => enrollment.course_id === course.id) || []
+    })) || [];
+
+    return coursesWithEnrollments;
   },
 
   // Enroll in course

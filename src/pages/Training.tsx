@@ -78,7 +78,7 @@ const Training = () => {
             </Card>
           ) : (
             courses.map((course) => {
-              const enrollment = course.enrollment?.[0];
+              const enrollment = course.enrollments?.[0];
               const isEnrolled = !!enrollment;
               const isCompleted = enrollment?.completed_at;
               const progress = enrollment?.progress || 0;

@@ -27,17 +27,11 @@ export interface EventParticipant {
 }
 
 export const calendarService = {
-  // Get all events
+  // Get all events - simplified without joins for now
   async getEvents(): Promise<CalendarEvent[]> {
     const { data, error } = await supabase
       .from('calendar_events')
-      .select(`
-        *,
-        participants:event_participants(
-          *,
-          user:profiles(full_name)
-        )
-      `)
+      .select('*')
       .order('start_datetime', { ascending: true });
 
     if (error) {

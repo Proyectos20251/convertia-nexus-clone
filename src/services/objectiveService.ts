@@ -21,15 +21,11 @@ export interface Objective {
 }
 
 export const objectiveService = {
-  // Get user's objectives
+  // Get user's objectives - simplified without joins for now
   async getUserObjectives(userId: string): Promise<Objective[]> {
     const { data, error } = await supabase
       .from('objectives')
-      .select(`
-        *,
-        user:profiles!user_id(full_name),
-        creator:profiles!creator_id(full_name)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 

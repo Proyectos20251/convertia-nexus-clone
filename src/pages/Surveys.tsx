@@ -143,7 +143,7 @@ const Surveys = () => {
             </Card>
           ) : (
             surveys.map((survey) => {
-              const hasResponse = survey.response && survey.response.length > 0;
+              const hasResponse = survey.responses && survey.responses.length > 0;
               const isExpired = survey.expires_at && new Date(survey.expires_at) < new Date();
 
               return (
