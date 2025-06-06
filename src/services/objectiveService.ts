@@ -7,76 +7,96 @@ export interface Objective {
   creator_id: string;
   title: string;
   description: string | null;
-  target_date: string | null;
-  progress: number;
   status: string;
+  progress: number;
+  target_date: string | null;
   created_at: string;
   updated_at: string;
-  user?: {
-    full_name: string;
-  };
-  creator?: {
-    full_name: string;
-  };
 }
 
 export const objectiveService = {
-  // Get user's objectives - simplified without joins for now
   async getUserObjectives(userId: string): Promise<Objective[]> {
-    const { data, error } = await supabase
-      .from('objectives')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Error fetching objectives:", error);
-      throw error;
+    if (!userId) {
+      console.warn("No user ID provided for getUserObjectives");
+      return [];
     }
 
-    return data || [];
-  },
+    try {
+      const { data, error } = await supabase
+        .from('objectives')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-  // Create objective
-  async createObjective(objectiveData: {
-    user_id: string;
-    title: string;
-    description?: string;
-    target_date?: string;
-  }): Promise<Objective> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Usuario no autenticado");
+      if (error) {
+        console.error("Error fetching objectives:", error);
+        return [];
+      }
 
-    const { data, error } = await supabase
-      .from('objectives')
-      .insert({
-        creator_id: user.id,
-        ...objectiveData
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating objective:", error);
-      throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error in getUserObjectives:", error);
+      return [];
     }
-
-    return data;
   },
 
-  // Update objective progress
-  async updateProgress(objectiveId: string, progress: number): Promise<void> {
-    const { error } = await supabase
-      .from('objectives')
-      .update({ 
-        progress,
-        status: progress >= 100 ? 'completed' : 'active'
-      })
-      .eq('id', objectiveId);
+  async createObjective(objective: Omit<Objective, 'id' | 'created_at' | 'updated_at'>): Promise<Objective | null> {
+    try {
+      const { data, error } = await supabase
+        .from('objectives')
+        .insert(objective)
+        .select()
+        .single();
 
-    if (error) {
-      console.error("Error updating objective progress:", error);
-      throw error;
+      if (error) {
+        console.error("Error creating objective:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in createObjective:", error);
+      return null;
+    }
+  },
+
+  async updateObjective(id: string, updates: Partial<Objective>): Promise<Objective | null> {
+    try {
+      const { data, error } = await supabase
+        .from('objectives')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating objective:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in updateObjective:", error);
+      return null;
+    }
+  },
+
+  async deleteObjective(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('objectives')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error("Error deleting objective:", error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in deleteObjective:", error);
+      return false;
     }
   }
 };

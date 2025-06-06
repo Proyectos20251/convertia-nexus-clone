@@ -28,15 +28,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users para desarrollo mientras implementamos Supabase Auth
+// Mock users con UUIDs válidos para desarrollo
 export const mockUsers = [
   {
-    id: "1",
+    id: "550e8400-e29b-41d4-a716-446655440001",
     email: "admin@convertia.com",
     password: "admin123",
     role: "admin" as UserRole,
     profile: {
-      id: "1",
+      id: "550e8400-e29b-41d4-a716-446655440001",
       full_name: "Administrador",
       position: "Administrador",
       department: "Dirección",
@@ -44,12 +44,12 @@ export const mockUsers = [
     },
   },
   {
-    id: "2",
+    id: "550e8400-e29b-41d4-a716-446655440002",
     email: "manager@convertia.com",
     password: "manager123",
     role: "manager" as UserRole,
     profile: {
-      id: "2",
+      id: "550e8400-e29b-41d4-a716-446655440002",
       full_name: "Gerente",
       position: "Gerente",
       department: "Recursos Humanos",
@@ -57,12 +57,12 @@ export const mockUsers = [
     },
   },
   {
-    id: "3",
+    id: "550e8400-e29b-41d4-a716-446655440003",
     email: "user@convertia.com",
     password: "user123",
     role: "collaborator" as UserRole,
     profile: {
-      id: "3",
+      id: "550e8400-e29b-41d4-a716-446655440003",
       full_name: "Usuario",
       position: "Colaborador",
       department: "Administración",
@@ -97,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         return;
       } catch (error) {
+        console.error("Error parsing stored user:", error);
         localStorage.removeItem("convertia-user");
       }
     }
@@ -104,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Configurar el listener de cambios de autenticación primero
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state change:", event, currentSession?.user?.id);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -121,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Luego verificar la sesión actual
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      console.log("Initial session:", currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
