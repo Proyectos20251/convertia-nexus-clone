@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { ToastProvider } from "@/components/ui/toast";
@@ -23,6 +22,9 @@ import Training from "@/pages/Training";
 import Surveys from "@/pages/Surveys";
 import Wellness from "@/pages/Wellness";
 import AIAssistantPage from "@/pages/AIAssistantPage";
+import Competencies from "@/pages/Competencies";
+import PeopleAnalytics from "@/pages/PeopleAnalytics";
+import Reports from "@/pages/Reports";
 import "./App.css";
 
 function App() {
@@ -150,6 +152,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AIAssistantPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/competencies"
+              element={
+                <ProtectedRoute>
+                  <Competencies />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/people-analytics"
+              element={
+                <ProtectedRoute>
+                  <PeopleAnalytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <Reports />
                 </ProtectedRoute>
               }
             />
