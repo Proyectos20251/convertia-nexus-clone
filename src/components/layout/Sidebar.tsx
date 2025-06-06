@@ -16,7 +16,21 @@ import {
   Settings,
   Users,
   X,
-  HelpCircle
+  HelpCircle,
+  Target,
+  GraduationCap,
+  ClipboardList,
+  TrendingUp,
+  Heart,
+  Bot,
+  UserCheck,
+  Award,
+  DollarSign,
+  Gift,
+  PenTool,
+  Shield,
+  BarChart3,
+  FileBarChart
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -26,6 +40,12 @@ const navItems = [
     title: "Inicio",
     path: "/dashboard",
     icon: Home,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Bandeja de entrada",
+    path: "/inbox",
+    icon: MessageSquare,
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {
@@ -41,16 +61,58 @@ const navItems = [
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {
+    title: "Calendario",
+    path: "/calendar",
+    icon: Calendar,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
     title: "Evaluación de Desempeño",
     path: "/performance",
     icon: BarChart2,
     roles: ["admin", "manager", "supervisor"],
   },
   {
-    title: "Comunicación",
-    path: "/inbox",
-    icon: MessageSquare,
+    title: "Objetivos",
+    path: "/objectives",
+    icon: Target,
     roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Formación",
+    path: "/training",
+    icon: GraduationCap,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Competencias",
+    path: "/competencies",
+    icon: Award,
+    roles: ["admin", "manager", "supervisor"],
+  },
+  {
+    title: "Encuestas",
+    path: "/surveys",
+    icon: ClipboardList,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "Bienestar",
+    path: "/wellness",
+    icon: Heart,
+    roles: ["admin", "manager", "supervisor", "collaborator"],
+  },
+  {
+    title: "People Analytics",
+    path: "/people-analytics",
+    icon: BarChart3,
+    roles: ["admin", "manager", "supervisor"],
+  },
+  {
+    title: "Reportes",
+    path: "/reports",
+    icon: FileBarChart,
+    roles: ["admin", "manager", "supervisor"],
   },
   {
     title: "Documentación",
@@ -59,9 +121,9 @@ const navItems = [
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {
-    title: "Calendario",
-    path: "/calendar",
-    icon: Calendar,
+    title: "Asistente IA",
+    path: "/ai-assistant",
+    icon: Bot,
     roles: ["admin", "manager", "supervisor", "collaborator"],
   },
   {

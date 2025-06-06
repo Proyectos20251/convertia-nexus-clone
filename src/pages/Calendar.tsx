@@ -1,74 +1,73 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Clock, CheckCircle, Calendar as CalendarIcon, User, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, Calendar as CalendarIcon, User, Users } from "lucide-react";
+import { calendarService, CalendarEvent } from "@/services/calendarService";
+import CreateEventDialog from "@/components/calendar/CreateEventDialog";
+import { toast } from "sonner";
 
 export default function Calendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const events = [
-    {
-      id: 1,
-      title: "Reunión de equipo",
-      date: new Date(2025, 4, 12, 10, 0),
-      endDate: new Date(2025, 4, 12, 11, 0),
-      type: "meeting",
-      attendees: 5,
-    },
-    {
-      id: 2,
-      title: "Revisión de proyecto",
-      date: new Date(2025, 4, 12, 14, 0),
-      endDate: new Date(2025, 4, 12, 15, 30),
-      type: "review",
-      attendees: 3,
-    },
-    {
-      id: 3,
-      title: "Entrega de documentación",
-      date: new Date(2025, 4, 15, 9, 0),
-      endDate: new Date(2025, 4, 15, 9, 30),
-      type: "task",
-      completed: false,
-    },
-    {
-      id: 4,
-      title: "Entrevista candidato",
-      date: new Date(2025, 4, 16, 11, 0),
-      endDate: new Date(2025, 4, 16, 12, 0),
-      type: "interview",
-      attendees: 2,
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const data = await calendarService.getEvents();
+      setEvents(data);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast.error('Error al cargar los eventos');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   // Filter events for the selected date
   const selectedDateStr = date ? date.toDateString() : "";
-  const todaysEvents = events.filter(event => event.date.toDateString() === selectedDateStr);
+  const todaysEvents = events.filter(event => {
+    const eventDate = new Date(event.start_datetime);
+    return eventDate.toDateString() === selectedDateStr;
+  });
   
   // Get event type badge color
   const getEventBadgeColor = (type: string) => {
     switch(type) {
       case "meeting": return "bg-blue-100 text-blue-800";
       case "review": return "bg-purple-100 text-purple-800";
-      case "task": return "bg-green-100 text-green-800";
+      case "training": return "bg-green-100 text-green-800";
       case "interview": return "bg-yellow-100 text-yellow-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
-  // Format time from date object
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('es-ES', {
+  // Format time from date string
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
     });
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto">
+          <div className="p-6">Cargando calendario...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -80,7 +79,9 @@ export default function Calendar() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-medium">Calendario</CardTitle>
-                <CardDescription>Mayo 2025</CardDescription>
+                <CardDescription>
+                  {date ? date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : ''}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <CalendarComponent
@@ -91,10 +92,7 @@ export default function Calendar() {
                 />
                 
                 <div className="mt-6 space-y-3">
-                  <Button className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo evento
-                  </Button>
+                  <CreateEventDialog onEventCreated={fetchEvents} />
                 </div>
               </CardContent>
             </Card>
@@ -136,24 +134,24 @@ export default function Calendar() {
                           <div key={event.id} className="flex border rounded-md p-4 hover:shadow-sm transition-all">
                             <div className="mr-4 flex flex-col items-center">
                               <div className="text-lg font-bold">
-                                {formatTime(event.date)}
+                                {formatTime(event.start_datetime)}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {formatTime(event.endDate)}
+                                {formatTime(event.end_datetime)}
                               </div>
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
                                 <h3 className="font-medium">{event.title}</h3>
-                                <Badge className={getEventBadgeColor(event.type)}>
-                                  {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                                <Badge className={getEventBadgeColor(event.event_type)}>
+                                  {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
                                 </Badge>
                               </div>
                               <div className="flex items-center mt-2 text-sm text-gray-600">
-                                {event.attendees ? (
+                                {event.participants && event.participants.length > 0 ? (
                                   <div className="flex items-center mr-4">
                                     <Users className="h-4 w-4 mr-1" />
-                                    {event.attendees} asistentes
+                                    {event.participants.length} asistentes
                                   </div>
                                 ) : (
                                   <div className="flex items-center mr-4">
@@ -163,9 +161,19 @@ export default function Calendar() {
                                 )}
                                 <div className="flex items-center">
                                   <Clock className="h-4 w-4 mr-1" />
-                                  {Math.round((event.endDate.getTime() - event.date.getTime()) / (1000 * 60))} min
+                                  {Math.round((new Date(event.end_datetime).getTime() - new Date(event.start_datetime).getTime()) / (1000 * 60))} min
                                 </div>
                               </div>
+                              {event.location && (
+                                <div className="text-sm text-gray-500 mt-1">
+                                  📍 {event.location}
+                                </div>
+                              )}
+                              {event.description && (
+                                <div className="text-sm text-gray-600 mt-2">
+                                  {event.description}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -174,10 +182,7 @@ export default function Calendar() {
                       <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                         <CalendarIcon className="h-12 w-12 mb-3 opacity-30" />
                         <p>No hay eventos programados para este día</p>
-                        <Button variant="link" className="mt-2">
-                          <Plus className="h-4 w-4 mr-1" />
-                          Agregar evento
-                        </Button>
+                        <CreateEventDialog onEventCreated={fetchEvents} />
                       </div>
                     )}
                   </TabsContent>
