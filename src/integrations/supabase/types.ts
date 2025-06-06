@@ -80,6 +80,57 @@ export type Database = {
           },
         ]
       }
+      ai_chat_history: {
+        Row: {
+          chat_type: string | null
+          created_at: string
+          id: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Insert: {
+          chat_type?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Update: {
+          chat_type?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          response?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_usage_limits: {
+        Row: {
+          created_at: string
+          id: string
+          requests_count: number | null
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requests_count?: number | null
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requests_count?: number | null
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           author_id: string | null
@@ -112,6 +163,178 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      benefits: {
+        Row: {
+          benefit_type: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          link_url: string | null
+          name: string
+          value: string | null
+        }
+        Insert: {
+          benefit_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          link_url?: string | null
+          name: string
+          value?: string | null
+        }
+        Update: {
+          benefit_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          link_url?: string | null
+          name?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      calendar_events: {
+        Row: {
+          created_at: string
+          creator_id: string
+          description: string | null
+          end_datetime: string
+          event_type: string | null
+          id: string
+          location: string | null
+          start_datetime: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          end_datetime: string
+          event_type?: string | null
+          id?: string
+          location?: string | null
+          start_datetime: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          end_datetime?: string
+          event_type?: string | null
+          id?: string
+          location?: string | null
+          start_datetime?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      competencies: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      competency_evaluations: {
+        Row: {
+          comments: string | null
+          competency_id: string
+          created_at: string
+          evaluation_period: string | null
+          evaluator_id: string
+          id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          comments?: string | null
+          competency_id: string
+          created_at?: string
+          evaluation_period?: string | null
+          evaluator_id: string
+          id?: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          comments?: string | null
+          competency_id?: string
+          created_at?: string
+          evaluation_period?: string | null
+          evaluator_id?: string
+          id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competency_evaluations_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_enrollments: {
+        Row: {
+          completed_at: string | null
+          course_id: string
+          created_at: string
+          id: string
+          progress: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          progress?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          progress?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "training_courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       departments: {
         Row: {
@@ -170,6 +393,74 @@ export type Database = {
         }
         Relationships: []
       }
+      event_participants: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message_type: string | null
+          recipient_id: string | null
+          sender_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message_type?: string | null
+          recipient_id?: string | null
+          sender_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message_type?: string | null
+          recipient_id?: string | null
+          sender_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           content: string | null
@@ -199,6 +490,45 @@ export type Database = {
           read?: boolean | null
           title?: string
           type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      objectives: {
+        Row: {
+          created_at: string
+          creator_id: string
+          description: string | null
+          id: string
+          progress: number | null
+          status: string | null
+          target_date: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          target_date?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          target_date?: string | null
+          title?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -245,6 +575,45 @@ export type Database = {
           team?: string | null
           updated_at?: string
           work_location?: string
+        }
+        Relationships: []
+      }
+      payroll: {
+        Row: {
+          basic_salary: number | null
+          bonuses: number | null
+          created_at: string
+          deductions: number | null
+          id: string
+          period: string
+          status: string | null
+          total_amount: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          basic_salary?: number | null
+          bonuses?: number | null
+          created_at?: string
+          deductions?: number | null
+          id?: string
+          period: string
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          basic_salary?: number | null
+          bonuses?: number | null
+          created_at?: string
+          deductions?: number | null
+          id?: string
+          period?: string
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -314,6 +683,74 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_responses: {
+        Row: {
+          id: string
+          responses: Json
+          submitted_at: string
+          survey_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          responses: Json
+          submitted_at?: string
+          survey_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          responses?: Json
+          submitted_at?: string
+          survey_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveys: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          questions: Json
+          target_groups: Json | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          questions: Json
+          target_groups?: Json | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          questions?: Json
+          target_groups?: Json | null
+          title?: string
+        }
+        Relationships: []
+      }
       time_records: {
         Row: {
           check_in: string
@@ -343,6 +780,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      training_courses: {
+        Row: {
+          content_type: string | null
+          content_url: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          duration_hours: number | null
+          id: string
+          is_mandatory: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content_type?: string | null
+          content_url?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          duration_hours?: number | null
+          id?: string
+          is_mandatory?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content_type?: string | null
+          content_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          duration_hours?: number | null
+          id?: string
+          is_mandatory?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_benefits: {
+        Row: {
+          assigned_at: string
+          benefit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          benefit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          benefit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_benefits_benefit_id_fkey"
+            columns: ["benefit_id"]
+            isOneToOne: false
+            referencedRelation: "benefits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_permissions: {
         Row: {
@@ -388,6 +893,87 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wellness_content: {
+        Row: {
+          content: string | null
+          content_type: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean | null
+          tags: string[] | null
+          title: string
+          url: string | null
+        }
+        Insert: {
+          content?: string | null
+          content_type?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
+          title: string
+          url?: string | null
+        }
+        Update: {
+          content?: string | null
+          content_type?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
+          title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      work_shifts: {
+        Row: {
+          break_duration: number | null
+          created_at: string
+          end_time: string
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          location_name: string | null
+          shift_date: string
+          start_time: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          break_duration?: number | null
+          created_at?: string
+          end_time: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          shift_date: string
+          start_time: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          break_duration?: number | null
+          created_at?: string
+          end_time?: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          shift_date?: string
+          start_time?: string
+          status?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

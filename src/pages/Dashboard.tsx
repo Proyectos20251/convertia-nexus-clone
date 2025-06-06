@@ -3,10 +3,15 @@ import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart2, Calendar, Clock, FileText, MessageSquare, Settings, Users } from "lucide-react";
+import { 
+  BarChart2, Calendar, Clock, FileText, MessageSquare, Settings, Users, 
+  Target, BookOpen, ClipboardList, Heart, Bot, TrendingUp, Award,
+  Building, UserCheck, Search, HelpCircle, DollarSign, Shield,
+  Briefcase, PieChart, FileSpreadsheet
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
-// Definición de los módulos que se mostrarán en el dashboard
+// Definición completa de todos los módulos de RRHH
 const modules = [
   {
     title: "Organización",
@@ -17,44 +22,196 @@ const modules = [
     roles: ["admin", "manager", "supervisor", "collaborator"]
   },
   {
-    title: "Gestión del Tiempo",
-    description: "Control de horarios, ausencias y vacaciones",
-    icon: Clock,
-    color: "bg-green-500",
-    link: "/time-management",
-    roles: ["admin", "manager", "supervisor", "collaborator"]
-  },
-  {
-    title: "Evaluación de Desempeño",
-    description: "Revisiones de rendimiento y objetivos",
-    icon: BarChart2,
-    color: "bg-purple-500",
-    link: "/performance",
-    roles: ["admin", "manager", "supervisor"]
-  },
-  {
-    title: "Comunicación",
-    description: "Mensajes y notificaciones internas",
+    title: "Bandeja de entrada",
+    description: "Mensajes y comunicación interna",
     icon: MessageSquare,
-    color: "bg-yellow-500", 
+    color: "bg-green-500",
     link: "/inbox",
     roles: ["admin", "manager", "supervisor", "collaborator"]
   },
   {
-    title: "Documentación",
-    description: "Archivos y documentos importantes",
-    icon: FileText,
+    title: "Búsqueda Global",
+    description: "Buscar empleados, documentos y recursos",
+    icon: Search,
+    color: "bg-purple-500",
+    link: "/search",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Organigrama",
+    description: "Estructura organizacional visual",
+    icon: Building,
+    color: "bg-indigo-500",
+    link: "/organization",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Expedientes",
+    description: "Perfiles completos de empleados",
+    icon: UserCheck,
+    color: "bg-teal-500",
+    link: "/organization",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Control de jornada",
+    description: "Registro de horarios y asistencia",
+    icon: Clock,
+    color: "bg-orange-500",
+    link: "/time-management",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Ausencias",
+    description: "Gestión de vacaciones y permisos",
+    icon: Calendar,
     color: "bg-red-500",
-    link: "/documents",
+    link: "/time-management",
     roles: ["admin", "manager", "supervisor", "collaborator"]
   },
   {
     title: "Calendario",
     description: "Eventos, reuniones y fechas importantes",
     icon: Calendar,
-    color: "bg-indigo-500",
+    color: "bg-blue-600",
     link: "/calendar",
     roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Evaluaciones",
+    description: "Revisiones de rendimiento y objetivos",
+    icon: BarChart2,
+    color: "bg-purple-600",
+    link: "/performance",
+    roles: ["admin", "manager", "supervisor"]
+  },
+  {
+    title: "Objetivos",
+    description: "Definición y seguimiento de metas",
+    icon: Target,
+    color: "bg-emerald-500",
+    link: "/objectives",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Formación",
+    description: "Cursos y desarrollo profesional",
+    icon: BookOpen,
+    color: "bg-amber-500",
+    link: "/training",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Competencias",
+    description: "Evaluación de habilidades y competencias",
+    icon: Award,
+    color: "bg-pink-500",
+    link: "/competencies",
+    roles: ["admin", "manager", "supervisor"]
+  },
+  {
+    title: "Nómina",
+    description: "Gestión de salarios y pagos",
+    icon: DollarSign,
+    color: "bg-green-600",
+    link: "/payroll",
+    roles: ["admin", "manager"]
+  },
+  {
+    title: "Beneficios",
+    description: "Beneficios y ventajas corporativas",
+    icon: Heart,
+    color: "bg-rose-500",
+    link: "/benefits",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Compensación",
+    description: "Compensaciones adicionales y bonos",
+    icon: TrendingUp,
+    color: "bg-cyan-500",
+    link: "/compensation",
+    roles: ["admin", "manager"]
+  },
+  {
+    title: "Documentos",
+    description: "Archivos y documentos importantes",
+    icon: FileText,
+    color: "bg-slate-500",
+    link: "/documents",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Firma Digital",
+    description: "Documentos para firma electrónica",
+    icon: FileText,
+    color: "bg-violet-500",
+    link: "/digital-signature",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Cumplimiento",
+    description: "Documentos de cumplimiento legal",
+    icon: Shield,
+    color: "bg-red-600",
+    link: "/compliance",
+    roles: ["admin", "manager"]
+  },
+  {
+    title: "Clima Laboral",
+    description: "Evaluación del ambiente de trabajo",
+    icon: Heart,
+    color: "bg-lime-500",
+    link: "/climate",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Encuestas",
+    description: "Encuestas y feedback de empleados",
+    icon: ClipboardList,
+    color: "bg-sky-500",
+    link: "/surveys",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Bienestar",
+    description: "Recursos de salud y bienestar",
+    icon: Heart,
+    color: "bg-emerald-600",
+    link: "/wellness",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "People Analytics",
+    description: "Análisis y métricas de recursos humanos",
+    icon: PieChart,
+    color: "bg-indigo-600",
+    link: "/analytics",
+    roles: ["admin", "manager"]
+  },
+  {
+    title: "Reportes",
+    description: "Generación de reportes y estadísticas",
+    icon: FileSpreadsheet,
+    color: "bg-orange-600",
+    link: "/reports",
+    roles: ["admin", "manager"]
+  },
+  {
+    title: "Asistente IA",
+    description: "Asistente inteligente para RRHH",
+    icon: Bot,
+    color: "bg-gradient-to-r from-purple-500 to-pink-500",
+    link: "/ai-assistant",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
+  },
+  {
+    title: "Integraciones",
+    description: "Conexiones con herramientas externas",
+    icon: Briefcase,
+    color: "bg-gray-600",
+    link: "/integrations",
+    roles: ["admin", "manager"]
   },
   {
     title: "Configuración",
@@ -63,6 +220,14 @@ const modules = [
     color: "bg-gray-500",
     link: "/settings",
     roles: ["admin", "manager"]
+  },
+  {
+    title: "Ayuda",
+    description: "Centro de ayuda y soporte",
+    icon: HelpCircle,
+    color: "bg-blue-700",
+    link: "/help",
+    roles: ["admin", "manager", "supervisor", "collaborator"]
   }
 ];
 
@@ -91,12 +256,12 @@ export default function Dashboard() {
               Bienvenido, {profile?.full_name || "Usuario"}
             </h1>
             <p className="text-gray-600">
-              Panel de control | {role ? role.charAt(0).toUpperCase() + role.slice(1) : "Usuario"}
+              Panel de control de Recursos Humanos | {role ? role.charAt(0).toUpperCase() + role.slice(1) : "Usuario"}
             </p>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredModules.map((module, index) => (
             <Link 
               key={index} 
@@ -112,17 +277,14 @@ export default function Dashboard() {
                 <div className={`absolute bottom-0 right-0 w-1/3 h-1 ${module.color} opacity-50`}></div>
                 <div className={`absolute top-1/2 right-4 w-20 h-20 ${module.color} opacity-10 rounded-full blur-xl -z-0`}></div>
                 
-                <CardHeader className="relative z-10">
+                <CardHeader className="relative z-10 pb-2">
                   <div className={`w-12 h-12 rounded-lg ${module.color} text-white flex items-center justify-center mb-3 shadow-lg transform transition-transform hover:rotate-12`}>
                     <module.icon size={24} />
                   </div>
-                  <CardTitle className="text-gray-800">{module.title}</CardTitle>
-                  <CardDescription>{module.description}</CardDescription>
+                  <CardTitle className="text-gray-800 text-sm font-semibold">{module.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="relative z-10">
-                  <p className="text-sm text-gray-500">
-                    Accede para gestionar {module.title.toLowerCase()}
-                  </p>
+                <CardContent className="relative z-10 pt-0">
+                  <CardDescription className="text-xs">{module.description}</CardDescription>
                 </CardContent>
               </Card>
             </Link>
